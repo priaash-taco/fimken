@@ -14,5 +14,5 @@ Repository initialised. The new application is yet to be built.
 
 ## Deployment
 
-The existing fimken.com deployment is separate from this repository. Creating
-this repository does not change the live site or its domain configuration.
+The current fimken.com site is hosted on Vercel. Its connection to this
+repository still needs to be verified before deploying the rebuild.
