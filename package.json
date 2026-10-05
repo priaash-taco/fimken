@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/audio.test.js tests/director.test.js tests/physics.test.js tests/assets.test.js tests/cinematic.test.js tests/character-pipeline.test.js tests/character-look.test.js tests/canonical-hero.test.js tests/humanoid-retarget.test.js tests/showcase.test.js",
+    "test": "node --test tests/audio.test.js tests/director.test.js tests/physics.test.js tests/assets.test.js tests/cinematic.test.js tests/character-pipeline.test.js tests/character-look.test.js tests/canonical-hero.test.js tests/humanoid-retarget.test.js tests/showcase.test.js tests/motion-life.test.js",
     "test:browser": "playwright test",
     "asset:import": "node scripts/import-character.mjs",
     "meshy:plan": "node scripts/meshy-draft.mjs plan",

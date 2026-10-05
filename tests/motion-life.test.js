@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {MotionLife} from '../src/engine/motion-life.js';
+const pose=(o={})=>({crouch:.1,lean:0,twist:0,bank:0,headPitch:0,headYaw:0,shoulderLift:0,shoulderDrive:0,hipShift:[0,0],left:[.2,1.3,.4],right:[-.2,1.3,.3],hitStop:0,charge:0,beam:0,power:.2,tension:0,fist:0,...o});
+test('life layer lags a torso turn behind the pose, settles on it, and never stops moving',()=>{
+ const life=new MotionLife(3);life.apply(pose(),1/60,0);
+ const first=life.apply(pose({twist:.5}),1/60,1/60);assert.ok(first.twist<.4,'torso must not arrive on the same frame');
+ let t=2/60,p;for(let i=0;i<120;i++){p=life.apply(pose({twist:.5}),1/60,t);t+=1/60;}
+ assert.ok(Math.abs(p.twist-.5)<.03,'settles near the authored turn');
+ const q=life.apply(pose({twist:.5}),1/60,t);assert.notEqual(q.headYaw,p.headYaw);assert.ok(Math.abs(q.left[1]-p.left[1])<.01,'wobble is small');
+});
+test('contacts and energy hands snap to the authored pose; paused frames pass through',()=>{
+ const life=new MotionLife(5);let t=0;for(let i=0;i<30;i++){life.apply(pose(),1/60,t);t+=1/60;}
+ const hit=life.apply(pose({left:[.1,1.3,.6],hitStop:1}),1/60,t);assert.deepEqual(hit.left.map(v=>+v.toFixed(3)),[.1,1.3,.6]);
+ const beam=life.apply(pose({left:[.07,1.28,.49],beam:1,charge:1,power:1}),1/60,t);assert.ok(Math.abs(beam.left[2]-.49)<.012);
+ const same=pose();assert.strictEqual(life.apply(same,0,t),same);
+});

@@ -6,6 +6,7 @@ import { HeroFinish } from './hero-finish.js';
 import { AnimationDirector } from './animation-director.js';
 import { CharacterLook } from './character-look.js';
 import { retargetLibrary, retargetHumanoidLibrary } from './retarget.js';
+import { MotionLife } from './motion-life.js';
 
 export class CharacterController {
   constructor(definition) {
@@ -123,7 +124,8 @@ export class CharacterController {
       if(this.vrm.lookAt) { this.vrm.lookAt.target=this.gazeTarget;this.vrm.lookAt.autoUpdate=this.finish==='cinematic' && !this.inspection; }
       this.vrm.update(dt);
     }
-    if(this.showcasePose && this.rigControls)this.rigControls.apply(this.showcasePose,time,music);
+    // Authored pose -> life layer (lag, noise, breathing, saccades) -> rig. Paused frames (dt 0) pass the pose through.
+    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;this.rigControls.apply(this.livePose,time,music);}
     // Expressions are two procedural shape keys ("focus", "shout"); they ease toward the pose.
     if(this.showcasePose){
       if(!this.morphs){this.morphs=[];this.model.traverse(o=>{if(o.morphTargetDictionary)this.morphs.push(o);});}
