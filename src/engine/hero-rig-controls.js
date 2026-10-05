@@ -79,9 +79,13 @@ export class HeroRigControls {
     root.updateMatrixWorld(true);
     const hips=this.bones.hips;
     const hipWorld=hips.getWorldPosition(new THREE.Vector3());hipWorld.y-=p.crouch-breathing;
-    hipWorld.add(new THREE.Vector3((p.hipShift?.[0]||0)+sway,0,p.hipShift?.[1]||0).applyQuaternion(root.quaternion));
+    // Weight and balance: when a foot lifts, the hips move over the planted one and the free
+    // hip drops; a forward lean moves the hips back to stay over the feet. Grounded only.
+    const grounded=1-hoverWeight,liftL=Math.max(0,(p.leftFoot?.[1]||0)-.02),liftR=Math.max(0,(p.rightFoot?.[1]||0)-.02);
+    const support=THREE.MathUtils.clamp((liftL-liftR)*5,-1,1)*grounded;
+    hipWorld.add(new THREE.Vector3((p.hipShift?.[0]||0)+sway-support*.045,0,(p.hipShift?.[1]||0)-p.lean*.05*grounded).applyQuaternion(root.quaternion));
     hips.position.copy(hips.parent.worldToLocal(hipWorld));
-    this.rotate('hips',0,(p.hipYaw||0)+sway*.5,-sway*.6);
+    this.rotate('hips',0,(p.hipYaw||0)+sway*.5,-sway*.6+support*.07);
     this.rotate('spine',p.lean*.45,p.twist*.4,(p.bank||0)*.4+sway*.4);
     this.rotate('chest',(p.followLean??p.lean)*.55+breathing*.5,(p.followTwist??p.twist)*.6,tremor+(p.bank||0)*.6+sway*.6);
     this.rotate('head',-p.lean*.25+breathing*.25+(p.headPitch||0),-(p.headTwist??p.twist)*.6+(p.headYaw||0),sway*.2);
