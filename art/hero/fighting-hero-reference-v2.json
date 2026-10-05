@@ -1,0 +1,23 @@
+{
+  "asset": "output/imagegen/fighting-hero-reference-v2.png",
+  "type": "2D concept reference for 3D modelling",
+  "model": "gpt-image-2",
+  "mode": "authorized CLI fallback",
+  "prompt": "art/hero/fighting-hero-reference-v2-prompt.txt",
+  "dimensions": [
+    2048,
+    2048
+  ],
+  "sha256": "5b8ca6c846c5952b28b3a7e292ed39b18a6c6a637315f601795dca4274294ed3",
+  "visualReview": {
+    "fullBodyAndHairUncropped": true,
+    "adultMuscularProportions": true,
+    "largeSculpturalHair": true,
+    "layeredClothingGlovesBoots": true,
+    "neutralStanceAndBackground": true,
+    "textOrEffects": false
+  },
+  "runtimeIntegrated": false,
+  "meshyUsed": false,
+  "notes": "Single near-front view. Side/back construction and deformation remain to be designed and validated during 3D asset creation."
+}

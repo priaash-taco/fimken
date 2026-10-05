@@ -1,0 +1,16 @@
+{
+  "id": "original-hero",
+  "name": "Original hero",
+  "status": "pending",
+  "provenance": {
+    "kind": "external",
+    "source": null,
+    "license": null
+  },
+  "url": null,
+  "height": 2.0,
+  "facing": 0,
+  "shading": "authored",
+  "clips": {},
+  "bones": {}
+}

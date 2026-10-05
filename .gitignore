@@ -5,6 +5,11 @@ build/
 .next/
 out/
 coverage/
+test-results/
+playwright-report/
+.tools/
+art/previews/
+*.blend1
 *.tsbuildinfo
 
 # Local environment and deployment settings
@@ -17,3 +22,20 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Meshy task state contains temporary signed asset URLs
+.meshy/
+
+# Heavy local intermediates: Blender scenes and re-exportable rig GLBs are rebuilt by art/hero/*.py
+# from the source Meshy GLB. Only the active hero and its source are committed.
+*.blend
+art/hero/meshy-manual/*.glb
+art/__pycache__/
+output/
+public/characters/imported/meshy-hero/006eaec3c169c72a.glb
+public/characters/imported/meshy-hero/455844cbad360431.glb
+public/characters/imported/meshy-hero/d83795dd625a2b13.glb
+public/characters/goku-hero/
+public/characters/goku.glb
+public/characters/beerus.glb
+public/studies/

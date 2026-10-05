@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-04",
+  "activeAsset": "meshy-hero",
+  "unitTestsPassed": 33,
+  "browserChecksPassed": 6,
+  "bindAlignmentRecheckPassed": true,
+  "build": "passed",
+  "sourceFileUnmodified": true,
+  "firstView": "paused neutral original materials; no aura or post effects",
+  "visualQA": [
+    "supplied front/profile/back",
+    "reduced surface at rest",
+    "corrected shoulder and knee deformation",
+    "runtime neutral full body and portrait",
+    "runtime idle and charge/release after A/T pose alignment correction"
+  ],
+  "paidRequestsMade": 0,
+  "limitations": [
+    "No facial expressions or finger articulation in this rig",
+    "Generic motion library; no authored martial-arts kick yet",
+    "Cloth at large shoulder/hip bends needs further animation-specific refinement",
+    "Existing Vite large-bundle warning"
+  ]
+}

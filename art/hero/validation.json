@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-04",
+  "unitTests": {
+    "passed": 29
+  },
+  "browserValidation": {
+    "fullSuitePassed": 12,
+    "finalPipelineChecksPassed": 3,
+    "castingHandRecheckPassed": 1,
+    "currentMaterialPassChecksPassed": 4
+  },
+  "build": "passed",
+  "visualQA": {
+    "neutralRig": "reviewed",
+    "stableChargeFrame": "reviewed",
+    "beamAttachment": "corrected_to_casting_hand",
+    "materialPass": "neutral, charge and blast frames reviewed; texture maps retained",
+    "materialPassPreview": "art/previews/material-cinematic.png",
+    "materialComparison": "original and cinematic switching verified; cinematic portrait reviewed"
+  },
+  "meshGeneration": "deferred_by_user",
+  "meshyRequests": 0,
+  "heroIs3D": false,
+  "testCharacter": "Seed-san / VirtualCast, Inc. / VRM Public License 1.0",
+  "knownLimits": [
+    "Original hero mesh and production animation not yet made",
+    "Reference motion library uses generic spell and attack demonstrations",
+    "4K allocation tested, sustained 4K frame rate not guaranteed",
+    "Vite reports existing large-bundle warning"
+  ]
+}

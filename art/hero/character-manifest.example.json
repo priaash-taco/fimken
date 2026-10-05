@@ -1,0 +1,11 @@
+{
+  "id": "original-hero",
+  "name": "Original hero",
+  "provenance": { "kind": "external", "source": "REPLACE_WITH_ARTIST_OR_GENERATION_TASK_SOURCE", "license": "REPLACE_WITH_VERIFIED_TERMS" },
+  "height": 2.0,
+  "facing": 0,
+  "shading": "authored",
+  "bones": {},
+  "clips": {},
+  "review": { "neutralLight": false, "deformation": false, "sourceTerms": false }
+}

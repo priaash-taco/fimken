@@ -1,0 +1,23 @@
+{
+  "currency": "USD",
+  "authorizedTotal": 2,
+  "scope": "One original male fighting-game hero reference image including retries",
+  "model": "gpt-image-2",
+  "quality": "high",
+  "size": "2048x2048",
+  "reservedUSD": 2,
+  "estimatedOutputCostPerAttemptUSD": 0.42816,
+  "maxSDKNetworkAttempts": 3,
+  "automaticRegeneration": false,
+  "confirmedSpent": null,
+  "status": "succeeded",
+  "pricingSource": "https://developers.openai.com/api/docs/models/gpt-image-2",
+  "output": "output/imagegen/fighting-hero-reference-v2.png",
+  "successfulImages": 1,
+  "cliInvocations": 1,
+  "actualDimensions": [
+    2048,
+    2048
+  ],
+  "billingNote": "One CLI invocation completed successfully. US$2 remains reserved to cover SDK retries and input tokens; exact billing was not returned by the bundled CLI. No further requests submitted."
+}

@@ -1,0 +1,25 @@
+{
+  "id": "original-hero",
+  "reference": "art/hero/canonical/hero.png",
+  "sha256": "5b8ca6c846c5952b28b3a7e292ed39b18a6c6a637315f601795dca4274294ed3",
+  "approvedBy": "User declared this image canonical on 2026-10-04",
+  "redesignAllowed": false,
+  "proceduralCharacterAllowed": false,
+  "preserve": [
+    "face and proportions",
+    "large sculpted black/purple hair",
+    "muscular anatomy",
+    "black/white/purple martial-arts outfit",
+    "layered waist cloth and sash",
+    "forearm armor",
+    "boots",
+    "premium anime fighting-game silhouette"
+  ],
+  "unseenSurfaces": "Infer only the unseen back and sides consistently; do not redesign visible features.",
+  "review": {
+    "firstView": "neutral",
+    "aura": false,
+    "postProcessing": false,
+    "gate": "Compare front, three-quarter, profile, back and close face/hands; review deformation before promotion."
+  }
+}

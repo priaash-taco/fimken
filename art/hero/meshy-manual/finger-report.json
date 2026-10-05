@@ -1,0 +1,109 @@
+{
+  "sides": {
+    "L": {
+      "cutFraction": null,
+      "handVertices": 3151,
+      "fingersFound": 5,
+      "fingers": {
+        "thumb": {
+          "bones": [
+            "thumb.01.L",
+            "thumb.02.L",
+            "thumb.03.L"
+          ],
+          "vertices": 530,
+          "length": 0.104
+        },
+        "index": {
+          "bones": [
+            "index.01.L",
+            "index.02.L",
+            "index.03.L"
+          ],
+          "vertices": 401,
+          "length": 0.1219
+        },
+        "middle": {
+          "bones": [
+            "middle.01.L",
+            "middle.02.L",
+            "middle.03.L"
+          ],
+          "vertices": 454,
+          "length": 0.1302
+        },
+        "ring": {
+          "bones": [
+            "ring.01.L",
+            "ring.02.L",
+            "ring.03.L"
+          ],
+          "vertices": 640,
+          "length": 0.1168
+        },
+        "pinky": {
+          "bones": [
+            "pinky.01.L",
+            "pinky.02.L",
+            "pinky.03.L"
+          ],
+          "vertices": 357,
+          "length": 0.087
+        }
+      }
+    },
+    "R": {
+      "cutFraction": null,
+      "handVertices": 3303,
+      "fingersFound": 5,
+      "fingers": {
+        "thumb": {
+          "bones": [
+            "thumb.01.R",
+            "thumb.02.R",
+            "thumb.03.R"
+          ],
+          "vertices": 558,
+          "length": 0.1076
+        },
+        "index": {
+          "bones": [
+            "index.01.R",
+            "index.02.R",
+            "index.03.R"
+          ],
+          "vertices": 388,
+          "length": 0.1225
+        },
+        "middle": {
+          "bones": [
+            "middle.01.R",
+            "middle.02.R",
+            "middle.03.R"
+          ],
+          "vertices": 500,
+          "length": 0.1302
+        },
+        "ring": {
+          "bones": [
+            "ring.01.R",
+            "ring.02.R",
+            "ring.03.R"
+          ],
+          "vertices": 712,
+          "length": 0.1169
+        },
+        "pinky": {
+          "bones": [
+            "pinky.01.R",
+            "pinky.02.R",
+            "pinky.03.R"
+          ],
+          "vertices": 366,
+          "length": 0.0836
+        }
+      }
+    }
+  },
+  "bones": 51
+}

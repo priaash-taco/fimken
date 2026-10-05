@@ -1,0 +1,62 @@
+{
+  "currency": "USD",
+  "authorizedTotal": 10,
+  "scope": "First texture pass, including retries",
+  "confirmedSpent": null,
+  "requestsSubmitted": 6,
+  "status": "original_hero_concept_complete",
+  "model": "gpt-image-2",
+  "quality": "high",
+  "sourceSize": "2048x2048",
+  "deliveryAtlasTarget": "8192x8192",
+  "native8KGeneration": false,
+  "costEstimateVerified": true,
+  "automaticRetries": true,
+  "costEvidence": "Official image generation calculator checked 2026-10-04: gpt-image-2 high 2048x2048 = 14272 output tokens, USD 0.42816 per image excluding prompt input.",
+  "sdkMaxRetries": 2,
+  "reservePerInvocationUSD": 1.5,
+  "reservedUSD": 10.0,
+  "invocations": [
+    {
+      "reserveUSD": 1.5,
+      "maxNetworkAttempts": 3,
+      "asset": "orange-gi",
+      "status": "succeeded"
+    },
+    {
+      "maxNetworkAttempts": 3,
+      "asset": "navy-cotton",
+      "status": "succeeded",
+      "reserveUSD": 1.5
+    },
+    {
+      "maxNetworkAttempts": 3,
+      "asset": "warm-skin",
+      "status": "succeeded",
+      "reserveUSD": 1.5
+    },
+    {
+      "maxNetworkAttempts": 3,
+      "asset": "ink-hair",
+      "status": "succeeded",
+      "reserveUSD": 1.5
+    },
+    {
+      "asset": "goku-face-paint",
+      "maxNetworkAttempts": 3,
+      "kind": "edit",
+      "status": "succeeded",
+      "reserveUSD": 2
+    },
+    {
+      "asset": "original-hero-concept",
+      "maxNetworkAttempts": 3,
+      "kind": "generate",
+      "status": "succeeded",
+      "reserveUSD": 2
+    }
+  ],
+  "successfulImages": 6,
+  "estimatedOutputCostUSD": 2.56896,
+  "billingNote": "US$10 reserved including possible SDK retries. No further paid requests until exact billing is reconciled or a new cap is agreed."
+}

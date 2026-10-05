@@ -1,0 +1,81 @@
+import { test, expect } from '@playwright/test';
+test('default uses the supplied Meshy rig in the showcase and never loads the sample avatar',async({page})=>{
+ const requests=[],errors=[];page.on('request',r=>requests.push(r.url()));page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?debug=1');await expect(page.locator('#battle')).toHaveAttribute('data-ready','true',{timeout:40000});
+ await expect(page.locator('#battle')).toHaveAttribute('data-asset-status','candidate');
+ await expect(page.locator('#battle')).toHaveAttribute('data-characters','meshy-hero');
+ await expect(page.locator('#battle')).toHaveAttribute('data-postprocessing','true');
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await expect(page.locator('#asset-status')).toContainText('Imported Meshy hero');
+ expect(requests.some(u=>u.includes('goku-scene.glb')||u.includes('seed.vrm')||u.includes('original-hero-concept'))).toBe(false);
+ await expect(page.getByRole('button',{name:'Power up',exact:true})).toBeEnabled();
+ expect(errors).toEqual([]);
+});
+test('external reference rig renders in neutral inspection with post-processing off',async({page})=>{
+ test.setTimeout(60000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?character=reference&inspection=1&debug=1');
+ const canvas=page.locator('#battle');await expect(canvas).toHaveAttribute('data-ready','true',{timeout:40000});
+ await expect(canvas).toHaveAttribute('data-characters','reference-seed');
+ await expect(canvas).toHaveAttribute('data-postprocessing','false');
+ await expect(canvas).toHaveAttribute('data-beam-visible','false');
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await expect(page.getByLabel('Inspect without effects')).toBeChecked();
+ await page.getByText('Advanced',{exact:true}).click();
+ await page.getByLabel('Ink outline').fill('0');
+ await expect(page.locator('#outline-width-value')).toHaveText('Off');
+ await page.getByRole('button',{name:'Pause animation'}).click();
+ await page.getByLabel('Camera view').selectOption('portrait');
+ await page.getByRole('button',{name:'Close settings'}).click();
+ await page.screenshot({path:'test-results/external-rig-neutral.png'});
+ expect(errors).toEqual([]);
+});
+
+test('the external rig drives the local energy sequence and freezes cleanly',async({page})=>{
+ test.setTimeout(60000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
+ await page.goto('/?character=reference&debug=1');
+ const canvas=page.locator('#battle');await expect(canvas).toHaveAttribute('data-ready','true',{timeout:40000});
+ await expect(canvas).toHaveAttribute('data-clips','45');
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await page.getByRole('button',{name:'Energy blast',exact:true}).click();
+ await expect(canvas).toHaveAttribute('data-phase','charge',{timeout:12000});
+ await expect.poll(async()=>Number(await canvas.getAttribute('data-progress'))).toBeGreaterThan(.2);
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await page.getByRole('button',{name:'Pause animation'}).click();
+ await page.getByRole('button',{name:'Close settings'}).click();
+ await page.screenshot({path:'art/previews/external-rig-charge.png'});
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await page.getByRole('button',{name:'Resume animation'}).click();
+ await page.getByRole('button',{name:'Close settings'}).click();
+ await expect(canvas).toHaveAttribute('data-beam-visible','true',{timeout:8000});
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await page.getByRole('button',{name:'Pause animation'}).click();
+ await page.getByRole('button',{name:'Close settings'}).click();
+ const progress=await canvas.getAttribute('data-progress');
+ await page.screenshot({path:'art/previews/external-rig-effects.png'});
+ await expect(canvas).toHaveAttribute('data-progress',progress);
+ await expect(canvas).toHaveAttribute('data-postprocessing','true');
+ expect(errors).toEqual([]);
+});
+
+
+test('material comparison switches the same paused external character without replacing the asset',async({page})=>{
+ test.setTimeout(60000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?character=reference&debug=1');const canvas=page.locator('#battle');
+ await expect(canvas).toHaveAttribute('data-ready','true',{timeout:40000});
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await page.getByRole('button',{name:'Pause animation'}).click();
+ await page.getByLabel('Camera view').selectOption('portrait');
+ await page.getByText('Advanced',{exact:true}).click();
+ await page.getByLabel('Character finish').selectOption('authored');
+ await expect(canvas).toHaveAttribute('data-finish','authored');
+ await page.getByRole('button',{name:'Close settings'}).click();
+ await page.screenshot({path:'art/previews/material-authored.png'});
+ await page.getByRole('button',{name:'Open settings'}).click();
+ await page.getByLabel('Character finish').selectOption('cinematic');
+ await expect(canvas).toHaveAttribute('data-finish','cinematic');
+ await page.getByRole('button',{name:'Close settings'}).click();
+ await page.screenshot({path:'art/previews/material-cinematic.png'});
+ await expect(canvas).toHaveAttribute('data-characters','reference-seed');
+ expect(errors).toEqual([]);
+});

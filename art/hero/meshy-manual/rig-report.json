@@ -1,0 +1,38 @@
+{
+  "vertices": 114761,
+  "triangles": 179999,
+  "bones": [
+    "hips",
+    "spine",
+    "chest",
+    "neck",
+    "head",
+    "shoulder.L",
+    "upperarm.L",
+    "forearm.L",
+    "hand.L",
+    "thigh.L",
+    "shin.L",
+    "foot.L",
+    "toe.L",
+    "shoulder.R",
+    "upperarm.R",
+    "forearm.R",
+    "hand.R",
+    "thigh.R",
+    "shin.R",
+    "foot.R",
+    "toe.R"
+  ],
+  "unweightedVertices": 0,
+  "isolatedVerticesRepaired": 6,
+  "sourceTexturesPreserved": true,
+  "limitations": [
+    "Single weighted mesh; no facial blendshapes",
+    "Hands follow wrist bones; no articulated finger rig",
+    "Generic library retargeting requires motion review"
+  ],
+  "weightRefinement": "Spatial seam blending; 3 passes, 25mm neighbourhood, maximum 4 weights. No mesh position/UV/material changes.",
+  "geometryOrigin": "Decimated supplied mesh; no synthetic replacement character geometry",
+  "runtimeRetargeting": "Local Quaternius clips, aligned reference bone directions for imported A-pose"
+}

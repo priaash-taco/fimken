@@ -1,0 +1,17 @@
+{
+  "concept": "complete",
+  "mesh": "user_supplied_and_imported",
+  "provider": "Meshy",
+  "providerStatus": "manual_generation_complete_no_api_needed",
+  "requestsSubmitted": 0,
+  "creditsSpent": 0,
+  "subscriptionStarted": false,
+  "automaticRegeneration": false,
+  "canonicalReference": "art/hero/canonical/reference.json",
+  "plan": "art/hero/meshy-hero-plan.json",
+  "authorization": "User selected the supplied GLB as the character; use it as-is. No comparison or approval against earlier concepts is required.",
+  "activeAsset": "src/engine/hero-asset.json",
+  "sourceFile": "public/characters/Meshy_AI_super_saiyan_goku_mod_1004173344_image-to-3d-texture.glb",
+  "rig": "local_21_bone_skeleton",
+  "firstRender": "neutral_paused_no_post_effects"
+}

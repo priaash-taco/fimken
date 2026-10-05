@@ -1,0 +1,6 @@
+{
+  "id": "goku",
+  "name": "Goku",
+  "species": "saiyan",
+  "palette": {"skin": "E8A167", "shadow": "995830", "cloth": "F78A16", "trim": "163350", "hair": "FFCF32", "energy": "FFCB42"}
+}

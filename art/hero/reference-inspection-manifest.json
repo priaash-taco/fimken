@@ -1,0 +1,14 @@
+{
+  "id": "reference-seed",
+  "name": "Seed-san (test rig)",
+  "height": 2,
+  "facing": 0,
+  "shading": "authored",
+  "provenance": {
+    "kind": "external",
+    "source": "https://github.com/vrm-c/vrm-specification/tree/master/samples/Seed-san",
+    "license": "VRM Public License 1.0; VirtualCast, Inc.; attribution required"
+  },
+  "clips": {},
+  "bones": {}
+}

@@ -1,0 +1,40 @@
+import {test,expect} from '@playwright/test';
+test('hero showcase: neutral IK poses, charge light, release and hover',async({page})=>{
+ test.setTimeout(150000);const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await page.goto('/?debug=1');const canvas=page.locator('#battle');await expect(canvas).toHaveAttribute('data-ready','true',{timeout:50000});
+ const open=()=>page.getByRole('button',{name:'Open settings'}).click();
+ const close=()=>page.getByRole('button',{name:'Close settings'}).click();
+ await expect(canvas).toHaveAttribute('data-characters','meshy-hero');
+ await open();await page.getByLabel('Inspect without effects').check();await page.getByLabel('Cinematic camera').uncheck();
+ await page.getByLabel('Hero pose').selectOption('charge-pose');await page.getByRole('button',{name:'Show pose',exact:true}).click();
+ await expect(canvas).toHaveAttribute('data-progress','1.000',{timeout:15000});
+ await expect(canvas).toHaveAttribute('data-postprocessing','false');await expect(canvas).toHaveAttribute('data-beam-visible','false');
+ await page.screenshot({path:'art/previews/showcase-charge-neutral.png'});
+ await open();await page.getByLabel('Inspect without effects').uncheck();await page.getByLabel('Cinematic camera').check();await page.getByRole('button',{name:'Energy charge',exact:true}).click();
+ await expect(canvas).toHaveAttribute('data-progress','1.000',{timeout:15000});await page.screenshot({path:'art/previews/showcase-charge.png'});
+ await open();await page.getByRole('button',{name:'Beam release',exact:true}).click();
+ await expect(canvas).toHaveAttribute('data-beam-visible','true',{timeout:20000});
+ await page.screenshot({path:'art/previews/showcase-beam.png'});
+ await open();await page.getByRole('button',{name:'Hover idle',exact:true}).click();await expect(canvas).toHaveAttribute('data-progress','1.000',{timeout:15000});
+ await page.screenshot({path:'art/previews/showcase-hover.png'});
+ await open();await page.getByRole('button',{name:'Pause animation'}).click();await close();
+ const frozen=await canvas.getAttribute('data-progress');await page.waitForTimeout(300);await expect(canvas).toHaveAttribute('data-progress',frozen);
+ expect(errors).toEqual([]);
+});
+
+test('power-up completes, held hero poses can be interrupted, mobile controls remain usable',async({page})=>{
+ test.setTimeout(90000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?debug=1');const c=page.locator('#battle');await expect(c).toHaveAttribute('data-ready','true',{timeout:40000});
+ await page.getByRole('button',{name:'Open settings'}).click();await page.getByRole('button',{name:'Power up',exact:true}).click();
+ await expect.poll(async()=>Number(await c.getAttribute('data-progress')),{timeout:20000}).toBeGreaterThan(.57);
+ await page.screenshot({path:'art/previews/showcase-powerup.png'});
+ await expect(c).toHaveAttribute('data-phase','idle',{timeout:15000});
+ await page.getByRole('button',{name:'Open settings'}).click();await page.getByLabel('Hero pose').selectOption('airborne');await page.getByRole('button',{name:'Show pose',exact:true}).click();
+ await expect(c).toHaveAttribute('data-progress','1.000',{timeout:15000});await page.screenshot({path:'art/previews/showcase-airborne.png'});
+ await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Open settings'}).click();
+ await expect(page.getByRole('button',{name:'Energy charge',exact:true})).toBeVisible();
+ await page.screenshot({path:'art/previews/showcase-controls-mobile.png'});
+ await page.getByLabel('Hero pose').selectOption('beam-pose');await page.getByRole('button',{name:'Show pose',exact:true}).click();
+ await expect(c).toHaveAttribute('data-progress','1.000',{timeout:15000});await expect(c).toHaveAttribute('data-beam-visible','false');
+ expect(errors).toEqual([]);
+});

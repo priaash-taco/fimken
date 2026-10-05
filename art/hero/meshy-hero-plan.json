@@ -1,0 +1,30 @@
+{
+  "provider": "Meshy",
+  "referenceManifest": "art/hero/canonical/reference.json",
+  "endpoint": "/openapi/v1/image-to-3d",
+  "parameters": {
+    "ai_model": "meshy-7.1",
+    "model_type": "standard",
+    "geometry_resolution": "4k",
+    "should_texture": true,
+    "texture_resolution": "4k",
+    "enable_pbr": true,
+    "image_enhancement": false,
+    "should_remesh": true,
+    "save_pre_remeshed_model": true,
+    "target_polycount": 100000,
+    "topology": "triangle",
+    "pose_mode": "a-pose",
+    "target_formats": [
+      "glb"
+    ]
+  },
+  "textureReference": "same canonical PNG bytes as geometry reference",
+  "estimatedCredits": 35,
+  "maxSubmissions": 1,
+  "automaticRegeneration": false,
+  "pricingChecked": "2026-10-04",
+  "pricingSource": "https://docs.meshy.ai/en/api/pricing",
+  "rigging": "Local Blender; no Meshy rigging/animation requests",
+  "neutralReviewURL": "/?character=candidate&inspection=1"
+}

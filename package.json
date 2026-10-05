@@ -1,0 +1,25 @@
+{
+  "name": "fimken",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/audio.test.js tests/director.test.js tests/physics.test.js tests/assets.test.js tests/cinematic.test.js tests/character-pipeline.test.js tests/character-look.test.js tests/canonical-hero.test.js tests/humanoid-retarget.test.js tests/showcase.test.js",
+    "test:browser": "playwright test",
+    "asset:import": "node scripts/import-character.mjs",
+    "meshy:plan": "node scripts/meshy-draft.mjs plan",
+    "hero:plan": "node scripts/meshy-hero.mjs plan",
+    "hero:check": "node scripts/meshy-hero.mjs check"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "vite": "^8.3.2"
+  },
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.5.5",
+    "three": "^0.186.1"
+  }
+}
