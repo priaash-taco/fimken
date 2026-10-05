@@ -15,3 +15,18 @@ test('contacts and energy hands snap to the authored pose; paused frames pass th
  const beam=life.apply(pose({left:[.07,1.28,.49],beam:1,charge:1,power:1}),1/60,t);assert.ok(Math.abs(beam.left[2]-.49)<.012);
  const same=pose();assert.strictEqual(life.apply(same,0,t),same);
 });
+test('rig keeps the hands apart and out of the torso',async()=>{
+ const THREE=await import('three');const {HeroRigControls,solveTwoBone}=await import('../src/engine/hero-rig-controls.js');
+ const fs=await import('node:fs');const definition=JSON.parse(fs.readFileSync('src/engine/hero-asset.json','utf8'));const bytes=fs.readFileSync('public'+definition.url);
+ const gltf=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)));
+ const nodes=gltf.nodes.map(n=>{const b=new THREE.Bone();b.name=THREE.PropertyBinding.sanitizeNodeName(n.name||'');if(n.translation)b.position.fromArray(n.translation);if(n.rotation)b.quaternion.fromArray(n.rotation);if(n.scale)b.scale.fromArray(n.scale);return b;});
+ gltf.nodes.forEach((n,i)=>n.children?.forEach(c=>nodes[i].add(nodes[c])));
+ const model=new THREE.Group();gltf.scenes[gltf.scene||0].nodes.forEach(i=>model.add(nodes[i]));model.scale.setScalar(2/2.3);
+ const root=new THREE.Group();root.add(model);const rig=new HeroRigControls({root,model,definition});
+ const {SHOWCASE_MOVES,samplePose}=await import('../src/engine/showcase-director.js');
+ const crossed={...samplePose(SHOWCASE_MOVES.strikes.keys,0),left:[-.02,1.3,.24],right:[.02,1.3,.24],hitStop:0};
+ rig.apply(crossed,1,{});const d=rig.bones.leftHand.getWorldPosition(new THREE.Vector3()).distanceTo(rig.bones.rightHand.getWorldPosition(new THREE.Vector3()));
+ assert.ok(d>.15,'hands pushed apart: '+d.toFixed(3));
+ const inside={...crossed,left:[.05,1.3,.02],right:[-.3,1.3,.3]};rig.apply(inside,1,{});const hand=root.worldToLocal(rig.bones.leftHand.getWorldPosition(new THREE.Vector3()));
+ const r=Math.hypot(hand.x/.21,(hand.z-.02)/.18);assert.ok(r>.95,'hand kept outside the torso: '+r.toFixed(2));
+});

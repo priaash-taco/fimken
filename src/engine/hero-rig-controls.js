@@ -87,6 +87,16 @@ export class HeroRigControls {
     this.rotate('head',-p.lean*.25+breathing*.25+(p.headPitch||0),-(p.headTwist??p.twist)*.6+(p.headYaw||0),sway*.2);
     for(const side of ['left','right']){const sign=side==='left'?1:-1;this.rotate(side+'Shoulder',0,sign*((p[side][2]-.13)*.18+(p.shoulderDrive||0)),-sign*(p.charge*.04+Math.max(0,p[side][1]-1.15)*.10+(p.shoulderLift||0)));}
     root.updateMatrixWorld(true);
+    // Hand targets with their idle drift, then two keep-outs: hands never pass through each
+    // other, and never sink into the torso. Authored poses already respect both; the life
+    // layer's lag and wobble can briefly push them over, so this catches that.
+    const hands={};
+    for(const side of ['left','right']){const sign=side==='left'?1:-1;const hand=new THREE.Vector3(...p[side]);hand.y+=breathing+tremor+Math.sin(time*1.9+sign*.65)*.008*idle;hand.z+=Math.sin(time*1.65+sign)*.008*idle;hands[side]=hand;}
+    const apart=hands.left.clone().sub(hands.right),minimum=.18;
+    if(apart.length()<minimum){const push=(minimum-apart.length())/2;if(apart.lengthSq()<1e-8)apart.set(1,0,0);apart.normalize();hands.left.addScaledVector(apart,push);hands.right.addScaledVector(apart,-push);}
+    for(const hand of [hands.left,hands.right]){
+      if(hand.y>.85&&hand.y<1.55){const dx=hand.x/.21,dz=(hand.z-.02)/.18,r=Math.hypot(dx,dz);if(r<1&&r>1e-6){hand.x=dx/r*.21;hand.z=.02+dz/r*.18;}}
+    }
     for(const side of ['left','right']){
       const sign=side==='left'?1:-1;
       const foot=this.feet[side].clone();if(!p.footControl){foot.y+=(side==='left'?.09:.015)*hoverWeight;foot.z+=(side==='left'?.10:-.07)*hoverWeight;}
@@ -95,7 +105,7 @@ export class HeroRigControls {
       const footBone=this.bones[side+'Foot'];
       footBone.quaternion.copy(footBone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(root.getWorldQuaternion(new THREE.Quaternion())).multiply(this.footRotations[side]));
       if(p[side+'Ankle'])footBone.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p[side+'Ankle'])));
-      const hand=new THREE.Vector3(...p[side]);hand.y+=breathing+tremor+Math.sin(time*1.9+sign*.65)*.008*idle;hand.z+=Math.sin(time*1.65+sign)*.008*idle;
+      const hand=hands[side];
       const pole=root.localToWorld(new THREE.Vector3(...(p[side+'Elbow']||[sign*.85,1.02,.45])));
       solveTwoBone(this.bones[side+'UpperArm'],this.bones[side+'LowerArm'],this.bones[side+'Hand'],root.localToWorld(hand),pole);
       // The source has wrist bones but no finger joints. Orient the existing hand
