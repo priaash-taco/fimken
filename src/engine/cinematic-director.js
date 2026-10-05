@@ -27,7 +27,7 @@ const SHOTS = {
 };
 const UP=new THREE.Vector3(0,1,0);
 export class CinematicDirector {
-  constructor(camera, controls) { this.camera = camera; this.controls = controls; this.position = new THREE.Vector3(); this.target = new THREE.Vector3(); this.revision = -1; }
+  constructor(camera, controls) { this.camera = camera; this.controls = controls; this.position = new THREE.Vector3(); this.target = new THREE.Vector3(); this.revision = -1; this.clock = 0; this.drift = new THREE.Vector3(); }
   update(dt, direction, actorPosition, view = 'training', snap = false) {
     const shot = SHOTS[view === 'portrait' ? 'close' : direction.shot] || SHOTS.hero;
     const p = THREE.MathUtils.smoothstep(direction.progress || 0, 0, 1);
@@ -36,6 +36,13 @@ export class CinematicDirector {
     const fixed=direction.shot==='actionWide'||shot.fixed, heading=direction.heading||0;
     this.target.fromArray(shot.aim);
     if(!fixed){this.position.applyAxisAngle(UP,heading).add(actorPosition);this.target.applyAxisAngle(UP,heading).add(actorPosition);}
+    // Live drift: a slow orbit and breathing push on every shot, plus a small nudge on beats,
+    // so a held shot never reads as a locked-off tripod. A few centimetres, never a cut.
+    this.clock += dt; const t = this.clock, beat = direction.music?.beatStrength || 0;
+    const toActor = this.position.clone().sub(this.target); const side = new THREE.Vector3().crossVectors(UP, toActor).normalize();
+    this.drift.set(0, 0, 0).addScaledVector(side, Math.sin(t * .23) * .09 + Math.sin(t * .071) * .05).addScaledVector(UP, Math.sin(t * .17 + 1) * .035)
+      .addScaledVector(toActor.clone().normalize(), Math.sin(t * .11) * .07 - beat * .05);
+    if (!snap) this.position.add(this.drift);
     const first = this.revision === -1;
     // Move continuously between action cameras. Phase changes never cut the view.
     if (snap || first) { this.camera.position.copy(this.position); this.controls.target.copy(this.target); }

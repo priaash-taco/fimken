@@ -76,6 +76,8 @@ test('camera phase transitions are continuous, including field of view',async()=
  d.update(0,{shot:'chargeHero',revision:1,progress:.8},origin,'training',true);const before=camera.position.clone(),fov=camera.fov;
  d.update(1/60,{shot:'beamHero',revision:2,progress:0},origin);
  assert.ok(camera.position.distanceTo(before)<.3,'shot changes must not teleport the camera');assert.ok(Math.abs(camera.fov-fov)<.3);
- for(let i=0;i<240;i++)d.update(1/60,{shot:'beamHero',revision:2,progress:1},origin);
- assert.ok(camera.position.distanceTo(new THREE.Vector3(-3.4,1.4,3.8))<.01);
+ // A held shot settles near its mark but keeps a slow drift of a few centimetres; every frame moves a little, none jumps.
+ let largest=0;for(let i=0;i<240;i++){const was=camera.position.clone();d.update(1/60,{shot:'beamHero',revision:2,progress:1},origin);if(i>60)largest=Math.max(largest,camera.position.distanceTo(was));}
+ assert.ok(camera.position.distanceTo(new THREE.Vector3(-3.4,1.4,3.8))<.3);assert.ok(largest<.05,'drift must never jump');
+ const settled=camera.position.clone();d.update(1/60,{shot:'beamHero',revision:2,progress:1},origin);assert.ok(camera.position.distanceTo(settled)>0,'the held shot keeps moving');
 });
