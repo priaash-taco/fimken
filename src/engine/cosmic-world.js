@@ -10,10 +10,10 @@ export class CosmicWorld {
   this.sky.rotation.y=1.8;this.sky.renderOrder=-10;this.root.add(this.sky);
   // Atmosphere over the starfield: sky blues at the horizon deepening to royal blue and purple
   // overhead, with banded clouds. It thins toward the zenith so the stars stay visible there.
-  this.air={time:{value:0}};
+  this.air={time:{value:0},contrast:{value:1},darken:{value:0}};
   this.atmosphere=new THREE.Mesh(new THREE.SphereGeometry(58,48,32),new THREE.ShaderMaterial({uniforms:this.air,side:THREE.BackSide,transparent:true,depthWrite:false,fog:false,
    vertexShader:'varying vec3 vDir;void main(){vDir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-   fragmentShader:shaderPalette+`uniform float time;varying vec3 vDir;
+   fragmentShader:shaderPalette+`uniform float time;uniform float contrast;uniform float darken;varying vec3 vDir;
    float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
    float noise2(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
    float fbm(vec2 p){return .55*noise2(p)+.28*noise2(p*2.1)+.17*noise2(p*4.3);}
@@ -26,6 +26,7 @@ export class CosmicWorld {
     float body=smoothstep(.68,.73,cover),lit=smoothstep(.76,.82,cover+.06*noise2(uv*3.+vec2(0.,.4)));
     vec3 cloudColor=mix(mix(p_friezaPurple,p_deepSkyBlue,.45)*.85,mix(p_cloudWhite,p_dbzSkyBlue,.25)*1.05,body);cloudColor=mix(cloudColor,p_cloudWhite*1.2,lit);
     color=mix(color,cloudColor,cloud);
+    color=(color-.12)*contrast+.12;color*=1.-darken;
     gl_FragColor=vec4(color*.46,max(alpha,cloud*.95));}`}));
   this.atmosphere.renderOrder=-9;this.root.add(this.atmosphere);
   const normalMap=loader.load(base+'lunar-normal.png');

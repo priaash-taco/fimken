@@ -27,6 +27,11 @@ export class LightingDirector {
     this.key.intensity = 1.5;
     this.floorLight.visible = !enabled;
   }
+  setMood(mood, effects) {
+    const l = mood.levels, dim = (l.powerUp * .3 + l.charge * .5 + l.release * .45 + l.impact * .2) * effects;
+    this.fill.intensity = .7 * (1 - dim); this.key.intensity = 1.5 * (1 - dim * .6);
+    this.floorLight.intensity = 24 * (1 - dim * .7);
+  }
   update(position, power, effects, actor, signals) {
     if(actor)actor.palm(this.orb.position);
     this.orb.intensity=this.inspection?0:(signals?.charge||0)*effects*2.2;

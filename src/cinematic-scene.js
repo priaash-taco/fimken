@@ -13,6 +13,8 @@ import { LightingDirector } from './engine/lighting-director.js';
 import { VFXDirector } from './engine/vfx-director.js';
 import { CinematicRenderer, QUALITY } from './engine/renderer.js';
 import { PerformanceMonitor } from './engine/performance-monitor.js';
+import { SceneMood } from './engine/scene-mood.js';
+import { GroundMarks } from './engine/ground-marks.js';
 
 export class TrainingScene {
   constructor(canvas, audio) {
@@ -42,6 +44,7 @@ export class TrainingScene {
     this.actor.gazeTarget = this.camera;
     this.scene.add(this.actor.root);
     this.vfx = new VFXDirector(this.scene);
+    this.mood = new SceneMood(); this.marks = new GroundMarks(this.scene);
     this.ready = Promise.all([this.actor.ready, this.world.ready]).then(() => {
       this.loaded = true;
       this.hasCharacter = Boolean(CHARACTER.url);
@@ -204,6 +207,11 @@ export class TrainingScene {
       this.shake *= Math.exp(-dt * 10);
       if (this.autoCamera) this.cinematography.update(dt, this.director, this.followPoint(), this.view);
     }
+    // Scene state drives lighting, sky, fog, grading, dust and ground marks together.
+    if (animate) this.mood.update(dt, this.director, this.music, this.actor.root.position, this.vfx.impactPoint);
+    this.lighting.setMood(this.mood, effects); this.world.setMood(this.mood, effects); this.marks.update(this.mood, effects);
+    this.world.cosmos.air.contrast.value = 1 + (this.mood.levels.powerUp * .25 + this.mood.levels.release * .4) * effects; this.world.cosmos.air.darken.value = (this.mood.levels.charge * .3 + this.mood.levels.release * .4) * effects;
+    this.pipeline.darken = this.mood.darken * effects; this.pipeline.contrast = 1 + (this.mood.contrast - 1) * effects; this.pipeline.flash = this.mood.flash * effects * (this.reducedMotion ? 0 : 1);
     this.lighting.update(this.actor.root.position, this.director.power, effects, this.actor, this.director.signals);
     if (this.loaded) this.vfx.update(animate ? dt : 0, this.time, this.actor, this.director, this.music, effects, !animate);
     this.controls.update();
@@ -213,9 +221,9 @@ export class TrainingScene {
     if (animate && !this.inspection) { this.camera.position.x += Math.sin(this.time * 67) * this.shake; this.camera.position.y += Math.sin(this.time * 81) * this.shake * .5; }
     this.actor.anchor('chest',this.pipeline.heatWorld);
     // Root speed drives the speed lines; smoothed so they fade in and out.
-    const root = this.actor.root.position, travelled = this.lastRoot ? root.distanceTo(this.lastRoot) : 0; (this.lastRoot ||= root.clone()).copy(root);
+    const root = this.actor.root.position, travelled = this.lastRoot ? Math.hypot(root.x - this.lastRoot.x, root.z - this.lastRoot.z) : 0; (this.lastRoot ||= root.clone()).copy(root);
     const pace = animate && wallDt > 0 && !this.reducedMotion ? THREE.MathUtils.clamp((travelled / Math.max(dt, 1e-3) - .9) / 1.5, 0, 1) * effects : 0;
-    this.pipeline.speed = THREE.MathUtils.damp(this.pipeline.speed || 0, pace, pace > (this.pipeline.speed || 0) ? 30 : 6, Math.min(.05, wallDt));
+    this.pipeline.speed = THREE.MathUtils.damp(this.pipeline.speed || 0, Math.max(pace, this.mood.levels.release * .3 * effects), pace > (this.pipeline.speed || 0) ? 30 : 6, Math.min(.05, wallDt));
     this.pipeline.cold = THREE.MathUtils.damp(this.pipeline.cold || 0, (this.director.signals?.beam || 0) * .75 * effects + (this.director.signals?.charge || 0) * .35 * effects, 4, Math.min(.05, wallDt));
     this.pipeline.gpuMs = this.performance.stats.gpuMs;
     this.pipeline.render(wallDt, this.director.power, effects, this.time);

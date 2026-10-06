@@ -2,6 +2,13 @@ import { PALETTE } from './palette.js';
 import * as THREE from 'three';
 import { CosmicWorld } from './cosmic-world.js';
 import { rockGeometry } from './rock-geometry.js';
+// The same banded diffuse the hero uses, so rocks and ground sit in the same drawing.
+const celBands = material => { const before = material.onBeforeCompile; material.onBeforeCompile = shader => { before?.call(material, shader);
+  shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+  float envL = max(.0001, dot(reflectedLight.directDiffuse, vec3(.2126,.7152,.0722)));
+  float envBand = mix(.22, .58, smoothstep(.24,.30,envL)); envBand = mix(envBand, 1.0, smoothstep(.62,.70,envL));
+  reflectedLight.directDiffuse *= mix(1.0, clamp(envBand/envL,.55,1.25), .8);
+  reflectedLight.indirectDiffuse *= .85;`); }; material.customProgramCacheKey = () => 'fimken-env-cel-v1'; };
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { ENVIRONMENT } from './assets.js';
 
@@ -9,7 +16,8 @@ export class EnvironmentDirector {
   constructor(scene, renderer) {
     this.scene = scene;this.cosmos=new CosmicWorld(scene);
     scene.background = new THREE.Color('#080914');
-    scene.fog = new THREE.FogExp2('#080914', .018);
+    // Distance flattens into blue-purple silhouettes.
+    scene.fog = new THREE.FogExp2('#0d1232', .026);
     // Rocky ground: it fades out 21 m from the centre, so the mesh stops there too.
     this.floor = new THREE.Mesh(new THREE.CircleGeometry(21, 96), new THREE.MeshStandardMaterial({ color: '#2a2019', roughness: .92, metalness: 0, envMapIntensity: .05, transparent: true, opacity:.72 }));
     this.floor.rotation.x = -Math.PI / 2;
@@ -20,7 +28,7 @@ export class EnvironmentDirector {
     this.floor.renderOrder = -8;
     scene.add(this.floor);
     // Rock spires around the arena, in the palette's rock and debris browns.
-    const rockMaterial = new THREE.MeshStandardMaterial({ roughness: .95, flatShading: true, vertexColors: true });
+    const rockMaterial = new THREE.MeshStandardMaterial({ roughness: .95, flatShading: true, vertexColors: true }); celBands(rockMaterial);
     // Three different rock shapes share the ring so neighbours do not match.
     const shapes = [rockGeometry({ detail: 5, taper: .5, seed: 3, roughness: .5 }), rockGeometry({ detail: 5, taper: .35, seed: 11, roughness: .55 }), rockGeometry({ detail: 5, taper: .6, seed: 23, roughness: .46 })];
     this.spires = new THREE.InstancedMesh(shapes[0], rockMaterial, 66);
@@ -31,7 +39,7 @@ export class EnvironmentDirector {
       // Keep the beam's path and the cameras in front of the hero clear of rock.
       let x = Math.sin(angle) * radius; const z = Math.cos(angle) * radius; if (z > 1 && Math.abs(x) < 9) x = Math.sign(x || 1) * (9 + Math.abs(x) * .8);
       spire.position.set(x, height * .35 - .2, z); spire.rotation.set((seed - .5) * .5, i * 1.9, (((i * .53) % 1) - .5) * .5); spire.scale.set(width, height, width * (.7 + seed * .5));
-      spire.updateMatrix(); this.spires.setMatrixAt(i, spire.matrix); this.spires.setColorAt(i, tint.set(PALETTE.rockBrown).lerp(new THREE.Color(PALETTE.debrisBrown), (i * .29) % 1).lerp(new THREE.Color(PALETTE.softBlack), .25).multiplyScalar(1.1 + seed * .5));
+      spire.updateMatrix(); this.spires.setMatrixAt(i, spire.matrix); this.spires.setColorAt(i, tint.set(PALETTE.rockBrown).lerp(new THREE.Color(PALETTE.debrisBrown), (i * .29) % 1).lerp(new THREE.Color(PALETTE.softBlack), .25).multiplyScalar(1.1 + seed * .5).lerp(new THREE.Color(PALETTE.deepRoyalBlue), THREE.MathUtils.smoothstep(radius, 9, 20) * .55));
     }
     this.spires.receiveShadow = true; scene.add(this.spires);
     // Every third instance uses a different shape: split the ring over three meshes.
@@ -42,14 +50,17 @@ export class EnvironmentDirector {
     // Rubble: hundreds of stones half-sunk in the ground, from pebbles near the hero to
     // slabs out by the spires. Deterministic placement, never on the hero's footprint.
     const pick = (i, k) => { const v = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return v - Math.floor(v); };
-    this.rubble = new THREE.InstancedMesh(rockGeometry({ detail: 2, roughness: .5, seed: 5 }), new THREE.MeshStandardMaterial({ roughness: .95, flatShading: true, vertexColors: true }), 520);
+    this.rubble = new THREE.InstancedMesh(rockGeometry({ detail: 2, roughness: .5, seed: 5 }), rockMaterial, 520);
     for (let i = 0; i < this.rubble.count; i++) {
       const angle = pick(i, 1) * Math.PI * 2, far = pick(i, 2), radius = 2.4 + far * far * 16, size = (.035 + Math.pow(pick(i, 3), 3) * .42) * (.5 + far);
       spire.position.set(Math.sin(angle) * radius, -size * .35, Math.cos(angle) * radius); spire.rotation.set(pick(i, 4) * 6.3, pick(i, 5) * 6.3, pick(i, 6) * 6.3); spire.scale.set(size * (1 + pick(i, 7)), size * .7, size * (1 + pick(i, 8)));
       spire.updateMatrix(); this.rubble.setMatrixAt(i, spire.matrix); this.rubble.setColorAt(i, tint.set(PALETTE.rockBrown).lerp(new THREE.Color(PALETTE.debrisBrown), pick(i, 9)).lerp(new THREE.Color(PALETTE.softBlack), .3).multiplyScalar(.9 + pick(i, 10) * .6));
     }
     this.rubble.receiveShadow = true; scene.add(this.rubble);
+    celBands(this.floor.material);
+    const floorCel = this.floor.material.onBeforeCompile;
     this.floor.material.onBeforeCompile = shader => {
+      floorCel(shader);
       shader.vertexShader = 'varying vec3 groundPosition;\n' + shader.vertexShader;
       shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', 'groundPosition = (modelMatrix * vec4(transformed, 1.)).xyz;\n#include <project_vertex>');
       shader.fragmentShader = 'varying vec3 groundPosition;\n' + shader.fragmentShader;
@@ -95,10 +106,18 @@ export class EnvironmentDirector {
     if (!this.inspection) this.scene.background.copy(this.scene.fog.color);
   }
   setQuality(count) { this.dust.geometry.setDrawRange(0, count); }
+  // Scene state: dust lifts and drifts, the ground darkens, fog thickens after an impact.
+  setMood(mood, effects) {
+    const lift = mood.dustLift * effects, l = mood.levels;
+    this.dust.material.opacity = .35 + lift * .4; this.dust.material.size = .018 + lift * .02;
+    this.dustLift = THREE.MathUtils.damp(this.dustLift || 0, lift * .9, 2, 1 / 60);
+    this.floor.material.color.set('#2a2019').multiplyScalar(1 - (l.powerUp * .25 + l.charge * .3 + l.release * .2) * effects);
+    if (!this.inspection) this.scene.fog.density = .026 + l.impact * .01 * effects - l.release * .008 * effects;
+  }
   update(time, power) {
     this.cosmos.update(time);
     this.haze.material.uniforms.time.value = time; this.haze.material.uniforms.energy.value = power;
-    this.dust.position.y = Math.sin(time * .07) * .15;
+    this.dust.position.y = Math.sin(time * .07) * .15 + (this.dustLift || 0);
     this.dust.rotation.y = time * .006;
   }
 }

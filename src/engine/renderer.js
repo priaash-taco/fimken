@@ -24,7 +24,8 @@ export class CinematicRenderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = .9;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Hard-edged, graphic ground shadows rather than soft physical ones.
+    this.renderer.shadowMap.type = THREE.BasicShadowMap;
     const target=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType});
     this.composer = new EffectComposer(this.renderer,target);
     this.composer.addPass(new RenderPass(scene, camera));
@@ -38,10 +39,10 @@ export class CinematicRenderer {
     // Heat haze, grade, tone mapping and sRGB conversion share one full-screen pass.
     // The arithmetic and its order match the former separate passes.
     this.finish = new ShaderPass(new THREE.RawShaderMaterial({
-      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
+      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
       vertexShader:'precision highp float;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;attribute vec3 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`precision highp float;
-      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
+      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
       #include <tonemapping_pars_fragment>
       #include <colorspace_pars_fragment>
       void main(){vec2 uv=vUv;
@@ -52,6 +53,9 @@ export class CinematicRenderer {
       vec3 c=texture2D(tDiffuse,uv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));
       c=mix(vec3(l),c,1.04);c*=vec3(1.+warmth,1.,1.-warmth*.55);
       c=mix(c,c*vec3(.72,.84,1.25)+vec3(0.,.01,.05)*l,cold);
+      // Attack treatment: the frame edges fall away, contrast rises, a release whites out for a beat.
+      float edgeFall=smoothstep(.12,.72,length((vUv-.5)*vec2(1.,.85)));
+      c*=1.-darken*edgeFall;c=max((c-.14)*contrast+.14,0.);c=mix(c,vec3(1.,.97,.9)*1.3,flash*.28);
       // Speed lines: thin streaks racing in from the frame edge while the hero moves fast.
       if(speed>0.){vec2 s=vUv-.5;float lane=floor(atan(s.y,s.x)*38.),pick=fract(sin(lane*91.7)*43758.5);
        float streak=step(.80,pick)*smoothstep(.20+pick*.12,.62,length(s))*step(.35,fract(length(s)*3.-time*7.-pick*5.));
@@ -119,7 +123,7 @@ export class CinematicRenderer {
     finish.radius.value.set(radius*.62/this.camera.aspect,radius);
     this.heatStrength = this.quality!=='low' && effects>.001 && power>.3 ? effects*(power-.3) : 0;
     finish.strength.value=this.heatStrength; finish.time.value=sceneTime;
-    finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.speed.value=this.speed||0;
+    finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
     const energy = Math.max(0, power - .25) / .75;
     this.bloom.strength = (.18 + energy * .2) * effects;
     this.bloom.radius = .18 + energy * .22;
