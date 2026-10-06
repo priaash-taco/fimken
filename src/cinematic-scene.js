@@ -239,7 +239,9 @@ export class TrainingScene {
     const root = this.actor.root.position, travelled = this.lastRoot ? Math.hypot(root.x - this.lastRoot.x, root.z - this.lastRoot.z) : 0; (this.lastRoot ||= root.clone()).copy(root);
     const pace = animate && wallDt > 0 && !this.reducedMotion ? THREE.MathUtils.clamp((travelled / Math.max(dt, 1e-3) - .9) / 1.5, 0, 1) * effects : 0;
     this.pipeline.speed = THREE.MathUtils.damp(this.pipeline.speed || 0, Math.max(pace, this.mood.levels.release * .3 * effects), pace > (this.pipeline.speed || 0) ? 30 : 6, Math.min(.05, wallDt));
-    this.pipeline.cold = THREE.MathUtils.damp(this.pipeline.cold || 0, (this.director.signals?.beam || 0) * .75 * effects + (this.director.signals?.charge || 0) * .35 * effects, 4, Math.min(.05, wallDt));
+    this.pipeline.cold = THREE.MathUtils.damp(this.pipeline.cold || 0, (this.director.signals?.beam || 0) * .75 * effects + (this.director.signals?.charge || 0) * .6 * effects, 4, Math.min(.05, wallDt));
+    this.pipeline.blur = Math.min(1, (this.pipeline.speed || 0) * .9 + this.mood.levels.release * .3 * effects) * (this.reducedMotion ? 0 : 1);
+    this.vfx.camera = this.camera;
     this.pipeline.gpuMs = this.performance.stats.gpuMs;
     this.pipeline.render(wallDt, this.director.power, effects, this.time);
     this.camera.position.copy(position);

@@ -6,6 +6,8 @@ import { EnergyShell } from './energy-shell.js';
 import { StrikeEffects } from './strike-effects.js';
 import { EnergyFlame } from './energy-flame.js';
 import { EnergyBurst } from './energy-burst.js';
+import { RayFan } from './energy-rays.js';
+import { EnergyArcs } from './energy-arcs.js';
 import { rockGeometry } from './rock-geometry.js';
 
 const noise = `
@@ -17,13 +19,18 @@ export class VFXDirector {
   constructor(scene) {
     this.motion=new EnergyMotion();this.strikes=new StrikeEffects(scene);this.flames=new EnergyShell(scene);this.blaze=new EnergyFlame(scene);
     this.muzzle=new EnergyBurst(scene,{colors:['spiritGlowWhite','kamehamehaBlue','deepBeamBlue'],rays:1,speed:6,additive:true,detail:3,intensity:.45});
+    this.fanCone=new RayFan(scene,{count:150});this.fanLong=new RayFan(scene,{count:70});this.fanOrb=new RayFan(scene,{count:100,spherical:true});
+    this.arcs=new EnergyArcs(scene);
+    // A crisp ring around the charge orb, always facing the camera.
+    this.orbRing=new THREE.Mesh(new THREE.RingGeometry(.955,1,128),new THREE.MeshBasicMaterial({color:paletteColor('spiritGlowWhite',2.2),transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+    this.orbRing.visible=false;this.orbRing.renderOrder=6;scene.add(this.orbRing);
     this.halo=new EnergyBurst(scene,{colors:['kamehamehaCyan','kamehamehaBlue','deepBeamBlue'],rays:1,speed:9,additive:true,detail:4});
-    this.impact=new EnergyBurst(scene,{colors:['explosionYellow','explosionOrange','explosionRed'],rays:.6,speed:2.6,smoke:'smokeGray',intensity:1.25});
+    this.impact=new EnergyBurst(scene,{colors:['explosionYellow','explosionOrange','explosionRed'],rays:.6,speed:2.6,smoke:'smokeGray',intensity:1.25,soft:true});
     // Impact dressing: flying embers, a blue shock ring and firelight on the rocks.
-    const emberSeeds=new Float32Array(180);for(let i=0;i<180;i++)emberSeeds[i]=(i*.618033)%1;
-    const emberGeometry=new THREE.BufferGeometry();emberGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(180*3),3));emberGeometry.setAttribute('seed',new THREE.BufferAttribute(emberSeeds,1));
+    const emberSeeds=new Float32Array(360);for(let i=0;i<360;i++)emberSeeds[i]=(i*.618033)%1;
+    const emberGeometry=new THREE.BufferGeometry();emberGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(360*3),3));emberGeometry.setAttribute('seed',new THREE.BufferAttribute(emberSeeds,1));
     this.embers=new THREE.Points(emberGeometry,new THREE.ShaderMaterial({uniforms:{power:{value:0}},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
-      vertexShader:'attribute float seed;varying float vSeed;void main(){vSeed=seed;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp((2.+seed*5.)*16./-mv.z,2.,16.);gl_Position=projectionMatrix*mv;}',
+      vertexShader:'attribute float seed;varying float vSeed;void main(){vSeed=seed;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp((2.5+seed*7.)*18./-mv.z,2.,22.);gl_Position=projectionMatrix*mv;}',
       fragmentShader:shaderPalette+'varying float vSeed;uniform float power;void main(){float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(mix(p_explosionYellow*2.6,p_explosionRed*1.8,vSeed),(1.-smoothstep(.5,1.,d))*power);}'}));
     this.embers.frustumCulled=false;this.embers.visible=false;scene.add(this.embers);
     this.shockRing=new THREE.Mesh(new THREE.TorusGeometry(1,.018,6,96),new THREE.MeshBasicMaterial({color:paletteColor('kamehamehaCyan',2.4),transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));this.shockRing.visible=false;scene.add(this.shockRing);
@@ -87,7 +94,7 @@ export class VFXDirector {
       float curl=sin(p.y*160.-time*12.+flow*9.+p.x*70.);
       float vein=pow(max(0.,1.-abs(curl)),7.);
       float core=pow(facing,9.)*(.72+flow*.28);
-      vec3 color=mix(p_deepBeamBlue*1.6,p_kamehamehaBlue*1.6,smoothstep(.25,.7,flow));
+      vec3 color=mix(p_kamehamehaBlue*1.8,p_kamehamehaCyan*2.2,smoothstep(.25,.7,flow));color=mix(color,p_spiritGlowWhite*2.1,smoothstep(.5,.98,facing));
       color=mix(color,mix(p_deepBeamBlue,p_friezaPurple,.35)*1.7,edge);color+=pow(core,2.5)*p_spiritGlowWhite*2.4+vein*mix(p_kamehamehaCyan,p_spiritGlowWhite,.5)*2.4;
       gl_FragColor=vec4(color,strength*(.78+flow*.22));}`,
     })); scene.add(this.ball);
@@ -128,7 +135,7 @@ export class VFXDirector {
     // Where the beam lands: a ball of blue-white energy, fire climbing from the ground, flung rock.
     this.tip=new EnergyBurst(scene,{colors:['spiritGlowWhite','kamehamehaBlue','deepBeamBlue'],rays:.85,speed:7,additive:true,detail:3});
     this.pyre=new EnergyFlame(scene);
-    this.shrapnel=new THREE.InstancedMesh(rockGeometry({detail:1,roughness:.55,seed:21}),new THREE.MeshStandardMaterial({color:PALETTE.rockBrown,roughness:.9,flatShading:true,vertexColors:true}),14);
+    this.shrapnel=new THREE.InstancedMesh(rockGeometry({detail:1,roughness:.55,seed:21}),new THREE.MeshStandardMaterial({color:PALETTE.rockBrown,roughness:.9,flatShading:true,vertexColors:true}),44);
     this.shrapnel.instanceMatrix.setUsage(THREE.DynamicDrawUsage);this.shrapnel.frustumCulled=false;this.shrapnel.visible=false;scene.add(this.shrapnel);this.ground=new THREE.Vector3();
     // The core is hottest along its centre line and falls to blue at its edge, with bright
     // streaks racing down its length, instead of one flat white tube.
@@ -233,7 +240,7 @@ export class VFXDirector {
     else if(!paused && blast>0)this.beamAge+=dt;
     this.ball.position.copy(palm);
     this.ball.visible=charge>.03&&effects>.01;
-    const orbSize=.3+charge*1.6,squash=1+Math.sin(time*3.2)*.025*charge;
+    const orbSize=.3+charge*2.1,squash=1+Math.sin(time*3.2)*.025*charge;
     this.ball.scale.set(orbSize*squash,orbSize/squash,orbSize);
     this.orbUniforms.time.value=time;this.orbUniforms.strength.value=effects*Math.min(1,charge*3);
     this.corona.position.copy(this.ball.position);this.corona.scale.copy(this.ball.scale);this.corona.visible=this.ball.visible;
@@ -248,9 +255,13 @@ export class VFXDirector {
     // A star of rays at the hands, and a fireball with smoke where the beam lands.
     const firing=blast*effects;
     const release=1-THREE.MathUtils.smoothstep(this.beamAge,.05,.55);
-    this.muzzle.update(time,this.impactPoint.copy(palm).addScaledVector(forward,.5+release*.6),.8+radius*.45+release*1.9,firing*(1-release*.5));
+    this.muzzle.update(time,this.impactPoint.copy(palm).addScaledVector(forward,.5+release*.6),.7+radius*.35+release*1.1,firing*(1-release*.6));
     // The fireball sits above its landing point, so the ground does not slice it flat.
-    this.impact.update(time,this.liftUp.copy(this.impactPoint.copy(palm).addScaledVector(forward,length)).addScaledVector(up,.9+radius*.5),(2.8+radius*1.5)*(1+.06*Math.sin(time*9)),firing*THREE.MathUtils.smoothstep(this.beamAge,.15,.45));
+    // A fireball the size of the animatic's: it grows over the first second, sits on the ground, and swells as the beam widens.
+    // The fire outlives the beam: it lights fast when the beam lands and burns down over about a second.
+    const landing=firing*THREE.MathUtils.smoothstep(this.beamAge,.15,.45);this.fire=THREE.MathUtils.damp(this.fire||0,landing>.4?1:0,landing>.4?9:1.8,Math.min(dt,.05));
+    const fireSize=(.9+radius*.42)*(.45+.55*(1-Math.exp(-(this.beamAge-.15)*2.4)))*(1+.05*Math.sin(time*9));
+    this.impact.update(time,this.liftUp.copy(this.impactPoint.copy(palm).addScaledVector(forward,length)).addScaledVector(up,fireSize*.62),fireSize,this.fire*effects);
     const landed=firing*THREE.MathUtils.smoothstep(this.beamAge,.15,.45);
     this.embers.visible=this.shockRing.visible=this.firelight.visible=this.shrapnel.visible=landed>.01;
     this.tip.update(time,this.impactPoint,(1.5+radius*.9)*(1+.08*Math.sin(time*17)),landed);
@@ -260,7 +271,7 @@ export class VFXDirector {
     for(let i=0;i<this.shrapnel.count&&landed>.01;i++){
       const seed=(i*.618033)%1,life=(i*.271+time*(.7+seed*.5))%1,angle=i*2.39996,reach=life*(2.2+seed*3),d=this.debrisTransform;
       d.position.set(this.impactPoint.x+Math.sin(angle)*reach,Math.max(.05,this.impactPoint.y+(1.2+seed*1.8)*reach*.6-life*life*4.2),this.impactPoint.z+Math.cos(angle)*reach*.7);
-      d.rotation.set(time*(2+seed*3),i+time*2.4,time*1.3);d.scale.setScalar((.07+seed*.14)*(1-life*.5)*landed);d.updateMatrix();this.shrapnel.setMatrixAt(i,d.matrix);
+      d.rotation.set(time*(2+seed*3),i+time*2.4,time*1.3);d.scale.setScalar((.09+seed*.26)*(1-life*.45)*landed);d.updateMatrix();this.shrapnel.setMatrixAt(i,d.matrix);
     }
     this.shrapnel.instanceMatrix.needsUpdate=true;
     if(landed>.01){
@@ -274,9 +285,9 @@ export class VFXDirector {
     for(const beam of [this.beam,this.core]){
       if(this.beam.visible)deformBeam(beam.geometry,time);
       beam.position.copy(this.ball.position).addScaledVector(forward,length/2);
-      const thick=beam===this.core?1.25:1;beam.scale.set(radius*thick,length,radius*thick);beam.quaternion.setFromUnitVectors(up,forward);
+      const thick=beam===this.core?.7:1;beam.scale.set(radius*thick,length,radius*thick);beam.quaternion.setFromUnitVectors(up,forward);
     }
-    this.beam.material.uniforms.time.value=time;this.beam.material.uniforms.strength.value=effects*blast;
+    this.beam.material.uniforms.time.value=time;this.beam.material.uniforms.strength.value=effects*blast*.3;
     this.core.material.uniforms.opacity.value=Math.min(1,effects*1.25)*blast;this.core.material.uniforms.time.value=time;
     for(let i=0;i<this.pressureRings.length;i++){
       const ring=this.pressureRings[i],u=(this.beamAge*1.8+i*.2)%1;
@@ -297,6 +308,16 @@ export class VFXDirector {
         a.setXYZ(i,palm.x+(sx*cs-sz*sn)*k,palm.y+(c.y+startY-palm.y)*k,palm.z+(sx*sn+sz*cs)*k);
       }a.needsUpdate=true;
     }
+    // The release: a blinding core and hundreds of long thin rays fanning out along the beam.
+    const grow=1-Math.exp(-this.beamAge*5);
+    this.fanCone.update(time,palm,forward,firing*.3,{length:3+9*grow,cone:.4+.18*(1-grow),width:.018});
+    this.fanLong.update(time,palm,forward,firing*.25,{length:Math.min(14,length),cone:.12,width:.02});
+    // The charge: fine streaks flung off the orb in every direction, a ring around it, and lightning crackling all around the hero.
+    const orbShow=blast<.01?effects*THREE.MathUtils.smoothstep(charge,.12,.8):0;
+    this.fanOrb.update(time,palm,forward,orbShow*.55,{length:.35+charge*.9,width:.01});
+    this.orbRing.visible=charge>.1&&effects>.01&&Boolean(this.camera);
+    if(this.orbRing.visible){this.orbRing.position.copy(palm);this.orbRing.quaternion.copy(this.camera.quaternion);this.orbRing.scale.setScalar(.095*this.ball.scale.x*1.55*(1+.03*Math.sin(time*13)));this.orbRing.material.opacity=Math.min(1,charge*2)*.9;}
+    if(this.camera){const crackle=Math.max(charge*.95,blast*.8,Math.max(0,power-.62)*1.6)*effects,heart=blast>.01||charge>.1?palm:this.anchors[1].clone().add(actor.root.position);this.arcs.update(time,heart,crackle,this.camera,1.6+charge*1.8+blast*1.4);}
     this.spiral.visible=charge>.04&&effects>.01;
     this.spiral.position.copy(palm);this.spiral.material.uniforms.power.value=effects*charge;
     const spiral=this.spiral.geometry.attributes.position;

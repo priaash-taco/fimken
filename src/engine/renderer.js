@@ -39,10 +39,10 @@ export class CinematicRenderer {
     // Heat haze, grade, tone mapping and sRGB conversion share one full-screen pass.
     // The arithmetic and its order match the former separate passes.
     this.finish = new ShaderPass(new THREE.RawShaderMaterial({
-      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
+      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
       vertexShader:'precision highp float;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;attribute vec3 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`precision highp float;
-      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
+      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
       #include <tonemapping_pars_fragment>
       #include <colorspace_pars_fragment>
       void main(){vec2 uv=vUv;
@@ -53,12 +53,17 @@ export class CinematicRenderer {
       // Shockwave ripple: a ring leaves the hero and bends the picture as it passes.
       float ringGlow=0.;
       if(shockS>0.){vec2 sd=vUv-center;sd.x*=aspect;float sr=length(sd);float ring=exp(-pow((sr-shockR)/.05,2.));vec2 dir=sd/max(sr,.0001);dir.x/=aspect;uv=clamp(uv-dir*ring*shockS*.035,vec2(.001),vec2(.999));ringGlow=ring*shockS;}
-      vec3 c=texture2D(tDiffuse,uv).rgb+ringGlow*vec3(.18,.3,.5);float l=dot(c,vec3(.2126,.7152,.0722));
+      // Radial motion blur: the background streaks away from the hero (who stays sharp near the centre).
+      vec3 c;
+      if(blur>0.){vec2 bd=(uv-center);bd.x*=aspect;float amt=blur*.075*smoothstep(.05,.55,length(bd));vec3 acc=vec3(0.);
+       for(int i=0;i<8;i++){float k=float(i)/7.;acc+=texture2D(tDiffuse,clamp(uv-(uv-center)*amt*k,vec2(.001),vec2(.999))).rgb;}c=acc/8.;}
+      else c=texture2D(tDiffuse,uv).rgb;
+      c+=ringGlow*vec3(.18,.3,.5);float l=dot(c,vec3(.2126,.7152,.0722));
       c=mix(vec3(l),c,1.04);c*=vec3(1.+warmth,1.,1.-warmth*.55);
-      c=mix(c,c*vec3(.72,.84,1.25)+vec3(0.,.01,.05)*l,cold);
+      c=mix(c,c*vec3(.66,.78,1.32)+vec3(.012,.0,.06)*l,cold);c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,1.+cold*.28);
       // Attack treatment: the frame edges fall away, contrast rises, a release whites out for a beat.
       float edgeFall=smoothstep(.12,.72,length((vUv-.5)*vec2(1.,.85)));
-      c*=1.-darken*edgeFall;c=max((c-.14)*contrast+.14,0.);c=mix(c,vec3(1.,.97,.9)*1.3,flash*.28);
+      c*=1.-darken*edgeFall;c=max((c-.14)*contrast+.14,0.);c=mix(c,vec3(1.,.97,.9)*1.2,flash*.14);
       // Speed lines: thin streaks racing in from the frame edge while the hero moves fast.
       if(speed>0.){vec2 s=vUv-.5;float lane=floor(atan(s.y,s.x)*38.),pick=fract(sin(lane*91.7)*43758.5);
        float streak=step(.80,pick)*smoothstep(.20+pick*.12,.62,length(s))*step(.35,fract(length(s)*3.-time*7.-pick*5.));
@@ -126,9 +131,9 @@ export class CinematicRenderer {
     finish.radius.value.set(radius*.62/this.camera.aspect,radius);
     this.heatStrength = this.quality!=='low' && effects>.001 && power>.3 ? effects*(power-.3) : 0;
     finish.strength.value=this.heatStrength; finish.time.value=sceneTime;
-    finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.shockR.value=this.shockR||0; finish.shockS.value=this.shockS||0; finish.aspect.value=this.camera.aspect; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
+    finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.blur.value=(this.blur||0)*(1-THREE.MathUtils.smoothstep(Math.max(Math.abs(this.heatProjection.x),Math.abs(this.heatProjection.y)),.8,1.3)); finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.shockR.value=this.shockR||0; finish.shockS.value=this.shockS||0; finish.aspect.value=this.camera.aspect; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
     const energy = Math.max(0, power - .25) / .75;
-    this.bloom.strength = (.18 + energy * .2) * effects;
+    this.bloom.strength = (.18 + energy * .1) * effects;
     this.bloom.radius = .18 + energy * .22;
     if (this.inspection) this.renderer.render(this.scene, this.camera);
     else this.composer.render();
