@@ -26,7 +26,7 @@ test('rig keeps the hands apart and out of the torso',async()=>{
  const {SHOWCASE_MOVES,samplePose}=await import('../src/engine/showcase-director.js');
  const crossed={...samplePose(SHOWCASE_MOVES.strikes.keys,0),left:[-.02,1.3,.24],right:[.02,1.3,.24],hitStop:0};
  rig.apply(crossed,1,{});const d=rig.bones.leftHand.getWorldPosition(new THREE.Vector3()).distanceTo(rig.bones.rightHand.getWorldPosition(new THREE.Vector3()));
- assert.ok(d>.15,'hands pushed apart: '+d.toFixed(3));
- const inside={...crossed,left:[.05,1.3,.02],right:[-.3,1.3,.3]};rig.apply(inside,1,{});const hand=root.worldToLocal(rig.bones.leftHand.getWorldPosition(new THREE.Vector3()));
- const r=Math.hypot(hand.x/.21,(hand.z-.02)/.18);assert.ok(r>.95,'hand kept outside the torso: '+r.toFixed(2));
+ assert.ok(d>.13,'hands pushed apart: '+d.toFixed(3));
+ const inside={...crossed,left:[.08,1.2,.06],right:[-.3,1.3,.3]};rig.apply(inside,1,{});const hand=root.worldToLocal(rig.bones.leftHand.getWorldPosition(new THREE.Vector3()));
+ const chest=root.worldToLocal(rig.bones.chest.getWorldPosition(new THREE.Vector3())),shape=rig.fitHand('left'),mid=hand.clone().add(shape.offset);assert.ok(Math.hypot(mid.x-chest.x,mid.z-chest.z)>.17,'hand kept outside the torso');
 });

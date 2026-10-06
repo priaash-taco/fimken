@@ -60,6 +60,42 @@ export class HeroRigControls {
     bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));
     bone.updateWorldMatrix(false,true);
   }
+  // Arm IK, wrist aim within a human bend, and the fist curl, for one hand target in root space.
+  solveArm(side,hand,p){
+    const root=this.actor.root,sign=side==='left'?1:-1;
+    const pole=root.localToWorld(new THREE.Vector3(...(p[side+'Elbow']||[sign*.85,1.02,.45])));
+    solveTwoBone(this.bones[side+'UpperArm'],this.bones[side+'LowerArm'],this.bones[side+'Hand'],root.localToWorld(hand.clone()),pole);
+    // Orient the existing hand geometry toward the energy centre; fingers only curl as a group.
+    const wrist=this.bones[side+'Hand'];
+    const direction=new THREE.Vector3(sign*.25,-1,.1).normalize();
+    direction.lerp(new THREE.Vector3(0,.85,.35).normalize(),p.guard||0).normalize();
+    const cup=new THREE.Vector3(-sign*.45,side==='left'?.5:-.5,.8).normalize();
+    direction.lerp(cup,THREE.MathUtils.smoothstep(p.charge,0,.30)).normalize();
+    direction.applyQuaternion(root.quaternion);
+    const current=wrist.getWorldQuaternion(new THREE.Quaternion());
+    // The hand stays in line with the forearm and only bends at the wrist within a human
+    // range. Aiming it freely made the rigid fingers and thumb swing around the arm.
+    const along=Y.clone().applyQuaternion(current),bend=along.angleTo(direction),limit=THREE.MathUtils.lerp(.3,.7,THREE.MathUtils.smoothstep(p.charge,0,.30));
+    const axis=along.clone().cross(direction);
+    const q=(axis.lengthSq()<1e-8?new THREE.Quaternion():new THREE.Quaternion().setFromAxisAngle(axis.normalize(),Math.min(bend,limit))).multiply(current);
+    wrist.quaternion.copy(wrist.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));
+    // Fist: fold each finger joint about its knuckle axis. The fingers are fused in the
+    // mesh, so they close together; individual fingers are not posed.
+    const curl=p.fist||0;
+    wrist.updateWorldMatrix(true,true);
+    if(curl>.001&&this.fingers[side]?.length){const handQ=wrist.getWorldQuaternion(new THREE.Quaternion());
+      for(const joint of this.fingers[side]){
+        const turn=new THREE.Quaternion().setFromAxisAngle(joint.axis.clone().applyQuaternion(handQ),joint.angle*curl).multiply(joint.bone.getWorldQuaternion(new THREE.Quaternion()));
+        joint.bone.quaternion.copy(joint.bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(turn));joint.bone.updateWorldMatrix(false,true);
+      }}
+  }
+  // A sphere around the posed hand: centre offset from the wrist and radius, in root space.
+  fitHand(side){
+    const root=this.actor.root,wrist=this.bones[side+'Hand'];
+    const points=[wrist,...['Index','Middle','Ring','Pinky','Thumb'].map(f=>this.bones[side+f+'Distal']).filter(Boolean)].map(b=>root.worldToLocal(b.getWorldPosition(new THREE.Vector3())));
+    const mid=points.reduce((a,b)=>a.add(b),new THREE.Vector3()).multiplyScalar(1/points.length);
+    return {offset:mid.clone().sub(points[0]),radius:THREE.MathUtils.clamp(Math.max(...points.map(q=>q.distanceTo(mid)))+.045,.09,.16)};
+  }
   apply(p,time,music){
     // Restore every controlled transform before composing the new pose: no frame-to-frame drift.
     for(const [b,r]of this.rest){b.quaternion.copy(r.q);b.position.copy(r.p);}
@@ -91,16 +127,12 @@ export class HeroRigControls {
     this.rotate('head',-p.lean*.25+breathing*.25+(p.headPitch||0),-(p.headTwist??p.twist)*.6+(p.headYaw||0),sway*.2);
     for(const side of ['left','right']){const sign=side==='left'?1:-1;this.rotate(side+'Shoulder',0,sign*((p[side][2]-.13)*.18+(p.shoulderDrive||0)),-sign*(p.charge*.04+Math.max(0,p[side][1]-1.15)*.10+(p.shoulderLift||0)));}
     root.updateMatrixWorld(true);
-    // Hand targets with their idle drift, then two keep-outs: hands never pass through each
-    // other, and never sink into the torso. Authored poses already respect both; the life
-    // layer's lag and wobble can briefly push them over, so this catches that.
+    // Hand targets with their idle drift. Authored poses keep the hands clear of each other and
+    // the body; the life layer's lag and wobble can briefly push them over, so a keep-out
+    // follows: solve the arms once, fit a sphere to each hand's wrist and fingertips as posed,
+    // push the spheres apart and out of the torso, then solve again. Same input, same output.
     const hands={};
     for(const side of ['left','right']){const sign=side==='left'?1:-1;const hand=new THREE.Vector3(...p[side]);hand.y+=breathing+tremor+Math.sin(time*1.9+sign*.65)*.008*idle;hand.z+=Math.sin(time*1.65+sign)*.008*idle;hands[side]=hand;}
-    const apart=hands.left.clone().sub(hands.right),minimum=.18;
-    if(apart.length()<minimum){const push=(minimum-apart.length())/2;if(apart.lengthSq()<1e-8)apart.set(1,0,0);apart.normalize();hands.left.addScaledVector(apart,push);hands.right.addScaledVector(apart,-push);}
-    for(const hand of [hands.left,hands.right]){
-      if(hand.y>.85&&hand.y<1.55){const dx=hand.x/.21,dz=(hand.z-.02)/.18,r=Math.hypot(dx,dz);if(r<1&&r>1e-6){hand.x=dx/r*.21;hand.z=.02+dz/r*.18;}}
-    }
     for(const side of ['left','right']){
       const sign=side==='left'?1:-1;
       const foot=this.feet[side].clone();if(!p.footControl){foot.y+=(side==='left'?.09:.015)*hoverWeight;foot.z+=(side==='left'?.10:-.07)*hoverWeight;}
@@ -109,33 +141,22 @@ export class HeroRigControls {
       const footBone=this.bones[side+'Foot'];
       footBone.quaternion.copy(footBone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(root.getWorldQuaternion(new THREE.Quaternion())).multiply(this.footRotations[side]));
       if(p[side+'Ankle'])footBone.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p[side+'Ankle'])));
-      const hand=hands[side];
-      const pole=root.localToWorld(new THREE.Vector3(...(p[side+'Elbow']||[sign*.85,1.02,.45])));
-      solveTwoBone(this.bones[side+'UpperArm'],this.bones[side+'LowerArm'],this.bones[side+'Hand'],root.localToWorld(hand),pole);
-      // The source has wrist bones but no finger joints. Orient the existing hand
-      // geometry toward the energy center; never pretend to articulate fingers.
-      const wrist=this.bones[side+'Hand'];
-      const direction=new THREE.Vector3(sign*.25,-1,.1).normalize();
-      direction.lerp(new THREE.Vector3(0,.85,.35).normalize(),p.guard||0).normalize();
-      const cup=new THREE.Vector3(-sign*.45,side==='left'?.5:-.5,.8).normalize();
-      direction.lerp(cup,THREE.MathUtils.smoothstep(p.charge,0,.30)).normalize();
-      direction.applyQuaternion(root.quaternion);
-      const current=wrist.getWorldQuaternion(new THREE.Quaternion());
-      // The hand stays in line with the forearm and only bends at the wrist within a human
-      // range. Aiming it freely made the rigid fingers and thumb swing around the arm.
-      const along=Y.clone().applyQuaternion(current),bend=along.angleTo(direction),limit=THREE.MathUtils.lerp(.3,.7,THREE.MathUtils.smoothstep(p.charge,0,.30));
-      const axis=along.clone().cross(direction);
-      const q=(axis.lengthSq()<1e-8?new THREE.Quaternion():new THREE.Quaternion().setFromAxisAngle(axis.normalize(),Math.min(bend,limit))).multiply(current);
-      wrist.quaternion.copy(wrist.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));
-      // Fist: fold each finger joint about its knuckle axis. The fingers are fused in the
-      // mesh, so they close together; individual fingers are not posed.
-      const curl=p.fist||0;
-      if(curl>.001&&this.fingers[side]?.length){wrist.updateWorldMatrix(true,true);const handQ=wrist.getWorldQuaternion(new THREE.Quaternion());
-        for(const joint of this.fingers[side]){
-          const turn=new THREE.Quaternion().setFromAxisAngle(joint.axis.clone().applyQuaternion(handQ),joint.angle*curl).multiply(joint.bone.getWorldQuaternion(new THREE.Quaternion()));
-          joint.bone.quaternion.copy(joint.bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(turn));joint.bone.updateWorldMatrix(false,true);
-        }}
     }
+    const shape={};
+    for(const side of ['left','right']){this.solveArm(side,hands[side],p);shape[side]=this.fitHand(side);}
+    const centre=side=>hands[side].clone().add(shape[side].offset);
+    {const cL=centre('left'),cR=centre('right'),gap=cL.clone().sub(cR),minimum=shape.left.radius+shape.right.radius+.01;
+      if(gap.length()<minimum){const push=minimum-gap.length();if(gap.lengthSq()<1e-8)gap.set(1,0,0);gap.normalize();
+        // A striking hand (its trail lit) keeps its mark; the other gives way.
+        const strikeL=(p.trails?.[0]||0)>.5,strikeR=(p.trails?.[1]||0)>.5,wL=strikeL&&!strikeR?0:strikeR&&!strikeL?1:.5;
+        hands.left.addScaledVector(gap,push*wL);hands.right.addScaledVector(gap,-push*(1-wL));}}
+    const hipsW=this.bones.hips.getWorldPosition(new THREE.Vector3()),neckW=(this.bones.neck||this.bones.chest).getWorldPosition(new THREE.Vector3()),axis=neckW.clone().sub(hipsW),axisLength=axis.length();axis.normalize();
+    for(const side of ['left','right']){
+      const world=root.localToWorld(centre(side)),along=THREE.MathUtils.clamp(world.clone().sub(hipsW).dot(axis),-.08,axisLength+.1);
+      const closest=hipsW.clone().addScaledVector(axis,along),radial=world.clone().sub(closest),radius=.13+shape[side].radius*.8;
+      if(radial.length()<radius){if(radial.lengthSq()<1e-8)radial.set(0,0,1).applyQuaternion(root.quaternion);const push=root.worldToLocal(closest.clone().addScaledVector(radial.normalize(),radius)).sub(root.worldToLocal(world.clone()));hands[side].add(push);}
+    }
+    for(const side of ['left','right'])this.solveArm(side,hands[side],p);
     root.updateMatrixWorld(true);
     this.center.copy(this.bones.leftHand.getWorldPosition(new THREE.Vector3())).add(this.bones.rightHand.getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);
     // Aimed slightly down, so the beam meets the ground in the distance.
