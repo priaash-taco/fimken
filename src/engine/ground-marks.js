@@ -22,15 +22,32 @@ export class GroundMarks {
        vec3 color=mix(vec3(.015,.01,.008),mix(p_explosionRed,p_explosionOrange,.5)*1.1,glow);
        gl_FragColor=vec4(color,crack*strength*(.8-smoothstep(4.,8.,age)*.8));}`}));
     this.cracks.rotation.x=-Math.PI/2;this.cracks.renderOrder=-7;this.cracks.visible=false;scene.add(this.cracks);
+    // Shockwave on the ground: a thin bright ring and a fainter wide one, leaving the hero at release.
+    const ringMaterial=(color,opacity)=>new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
+    this.shock=new THREE.Mesh(new THREE.RingGeometry(.93,1,128),ringMaterial('#67DDF7',0));this.shock2=new THREE.Mesh(new THREE.RingGeometry(.7,1,128),ringMaterial('#1267D6',0));
+    for(const m of [this.shock,this.shock2]){m.rotation.x=-Math.PI/2;m.visible=false;m.renderOrder=-6;scene.add(m);}
+    // Crater glow: the ground stays lit where the beam or a heavy hit landed, cooling over several seconds.
+    this.craterUniforms={age:{value:99},strength:{value:0},time:{value:0}};
+    this.crater=new THREE.Mesh(new THREE.CircleGeometry(1,48),new THREE.ShaderMaterial({uniforms:this.craterUniforms,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+      vertexShader:'varying vec2 vP;void main(){vP=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+      fragmentShader:shaderPalette+`uniform float age;uniform float strength;uniform float time;varying vec2 vP;${noise}
+      void main(){float r=length(vP),flick=.8+.2*noise3(vec3(vP*3.,time*2.));float glow=pow(max(0.,1.-r),2.)*exp(-max(age,0.)*.45)*flick;
+       vec3 color=mix(p_explosionRed,p_explosionYellow,glow)*1.6;gl_FragColor=vec4(color,glow*strength*.8);}`}));
+    this.crater.rotation.x=-Math.PI/2;this.crater.renderOrder=-6;this.crater.visible=false;scene.add(this.crater);
     // Dust ring: points thrown outward and up, settling as they fade.
-    const count=160,seeds=new Float32Array(count);for(let i=0;i<count;i++)seeds[i]=(i*.618033)%1;
+    const count=320,seeds=new Float32Array(count);for(let i=0;i<count;i++)seeds[i]=(i*.618033)%1;
     const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(count*3),3));geometry.setAttribute('seed',new THREE.BufferAttribute(seeds,1));
     this.dust=new THREE.Points(geometry,new THREE.ShaderMaterial({uniforms:{opacity:{value:0}},transparent:true,depthWrite:false,
-      vertexShader:'attribute float seed;varying float vSeed;void main(){vSeed=seed;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp((3.+seed*6.)*18./-mv.z,2.,22.);gl_Position=projectionMatrix*mv;}',
-      fragmentShader:shaderPalette+'varying float vSeed;uniform float opacity;void main(){float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(mix(p_smokeGray,p_rockBrown,vSeed)*1.1,(1.-smoothstep(.4,1.,d))*opacity*.55);}'}));
+      vertexShader:'attribute float seed;varying float vSeed;void main(){vSeed=seed;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp((4.+seed*8.)*20./-mv.z,2.,30.);gl_Position=projectionMatrix*mv;}',
+      fragmentShader:shaderPalette+'varying float vSeed;uniform float opacity;void main(){float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(mix(p_smokeGray,p_rockBrown,vSeed)*1.15,(1.-smoothstep(.35,1.,d))*opacity*.8);}'}));
     this.dust.frustumCulled=false;this.dust.visible=false;scene.add(this.dust);
   }
-  update(mood,effects){
+  update(mood,effects,time=0){
+    const sAge=mood.shockAge,sLive=sAge>=0&&sAge<1.1&&effects>.01;this.shock.visible=this.shock2.visible=sLive;
+    if(sLive){for(const m of [this.shock,this.shock2]){m.position.set(mood.shockPoint.x,.03,mood.shockPoint.z);m.scale.setScalar(.5+sAge*11);}
+      this.shock.material.opacity=(1-sAge/1.1)*.75*effects;this.shock2.material.opacity=(1-sAge/1.1)*.3*effects;}
+    const cAge=mood.impactAge,cLive=cAge>=0&&cAge<9&&mood.impactStrength*effects>.01;this.crater.visible=cLive;
+    if(cLive){this.crater.position.set(mood.impactPoint.x,.015,mood.impactPoint.z);this.crater.scale.setScalar(.9+mood.impactStrength*1.1);this.craterUniforms.age.value=cAge;this.craterUniforms.strength.value=Math.min(1,cAge/.15)*mood.impactStrength*effects;this.craterUniforms.time.value=time;}
     const age=mood.impactAge,strength=mood.impactStrength*effects,live=age>=0&&age<9&&strength>.01;
     this.cracks.visible=live;this.dust.visible=live&&age<1.6;
     if(!live)return;

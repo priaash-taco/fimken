@@ -43,16 +43,17 @@ export class CosmicWorld {
   };
   this.moon=new THREE.Mesh(new THREE.SphereGeometry(1.45,96,64),moonMaterial);
   this.moon.position.set(-11,15,-34);this.moon.rotation.set(.12,-Math.PI*.5,-.15);this.root.add(this.moon);
-  const solarMaterial=new THREE.ShaderMaterial({uniforms:{surface:{value:map('solar-photosphere.jpg')}},vertexShader:`
+  this.sunDim={value:1};
+  const solarMaterial=new THREE.ShaderMaterial({uniforms:{surface:{value:map('solar-photosphere.jpg')},dim:this.sunDim},vertexShader:`
    varying vec2 vUv; varying vec3 vNormal; varying vec3 vEye;
    void main(){vUv=uv;vec4 p=modelViewMatrix*vec4(position,1.0);vNormal=normalize(normalMatrix*normal);vEye=-p.xyz;gl_Position=projectionMatrix*p;}
   `,fragmentShader:`
-   uniform sampler2D surface; varying vec2 vUv; varying vec3 vNormal; varying vec3 vEye;
+   uniform sampler2D surface; uniform float dim; varying vec2 vUv; varying vec3 vNormal; varying vec3 vEye;
    void main(){
     float mu=max(dot(normalize(vNormal),normalize(vEye)),0.0);
     float limb=0.32+0.68*pow(mu,0.48);
     vec3 color=texture2D(surface,vUv).rgb;
-    gl_FragColor=vec4(color*limb*2.1,1.0);
+    gl_FragColor=vec4(color*limb*2.1*dim,1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
    }
@@ -77,4 +78,9 @@ export class CosmicWorld {
  }
  setInspection(enabled){this.root.visible=!enabled;}
  update(time){this.sun.rotation.y=time*.003;this.air.time.value=time;}
+ setMood(mood,effects){const l=mood.levels;
+  // Brighter and bigger in a power-up; dimmed and shrunk behind a charge or beam.
+  const glow=1+(l.powerUp*.25-l.charge*.45-l.release*.6)*effects;this.sunDim.value=Math.max(.25,glow);
+  this.corona.material.opacity=Math.max(.2,1+(l.powerUp*.3-l.charge*.5-l.release*.7)*effects);this.corona.scale.setScalar(6*(1+l.powerUp*.15*effects));
+  this.moon.scale.setScalar(1+l.powerUp*.05*effects);}
 }

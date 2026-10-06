@@ -15,6 +15,7 @@ import { CinematicRenderer, QUALITY } from './engine/renderer.js';
 import { PerformanceMonitor } from './engine/performance-monitor.js';
 import { SceneMood } from './engine/scene-mood.js';
 import { GroundMarks } from './engine/ground-marks.js';
+import { ENERGY_LIGHT } from './engine/energy-light.js';
 
 export class TrainingScene {
   constructor(canvas, audio) {
@@ -209,9 +210,15 @@ export class TrainingScene {
     }
     // Scene state drives lighting, sky, fog, grading, dust and ground marks together.
     if (animate) this.mood.update(dt, this.director, this.music, this.actor.root.position, this.vfx.impactPoint);
-    this.lighting.setMood(this.mood, effects); this.world.setMood(this.mood, effects); this.marks.update(this.mood, effects);
+    this.pipeline.shockR = this.mood.shockAge * 1.15; this.pipeline.shockS = Math.max(0, 1 - this.mood.shockAge / .85) * effects * (this.reducedMotion ? 0 : 1);
+    this.lighting.setMood(this.mood, effects); this.world.setMood(this.mood, effects, this.vfx.motion.wind); this.marks.update(this.mood, effects, this.time);
     this.world.cosmos.air.contrast.value = 1 + (this.mood.levels.powerUp * .25 + this.mood.levels.release * .4) * effects; this.world.cosmos.air.darken.value = (this.mood.levels.charge * .3 + this.mood.levels.release * .4) * effects;
     this.pipeline.darken = this.mood.darken * effects; this.pipeline.contrast = 1 + (this.mood.contrast - 1) * effects; this.pipeline.flash = this.mood.flash * effects * (this.reducedMotion ? 0 : 1);
+    // The energy light follows the hero's energy: chest while powering, palm while charging or firing, the landing point at an impact.
+    { const l = this.mood.levels, e = ENERGY_LIGHT, palm = this.vfx.ball.position, k = Math.max(l.charge, l.release);
+      e.position.value.copy(this.actor.root.position).y += 1.1; e.position.value.lerp(palm, k); e.position.value.lerp(this.mood.impactPoint.clone().setY(.7), Math.min(1, l.impact * 1.4));
+      e.color.value.set('#F7D64A').multiplyScalar(l.powerUp + l.recovery * .3).add(new THREE.Color('#33A8F2').multiplyScalar(l.charge + l.release)).add(new THREE.Color('#FF8C22').multiplyScalar(l.impact));
+      e.strength.value = (l.powerUp * 1.1 + l.recovery * .25 + l.charge * 1.7 + l.release * 2.6 + l.impact * .55) * effects; }
     this.lighting.update(this.actor.root.position, this.director.power, effects, this.actor, this.director.signals);
     if (this.loaded) this.vfx.update(animate ? dt : 0, this.time, this.actor, this.director, this.music, effects, !animate);
     this.controls.update();

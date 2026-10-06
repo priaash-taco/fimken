@@ -153,6 +153,13 @@ export class VFXDirector {
     this.spiral=new THREE.Points(this.sparks.geometry.clone(),this.sparks.material.clone());
     this.spiral.material.fragmentShader=shaderPalette+'varying float vSeed;uniform float power;void main(){float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(p_kamehamehaCyan*2.5,exp(-d*d*5.)*(1.-smoothstep(.6,1.,d))*power);}';
     this.spiral.geometry.setDrawRange(0,240);scene.add(this.spiral);this.beamAge=0;
+    // Charge inflow: sparks drawn from the surrounding air into the hands, accelerating as they arrive.
+    const inflowSeeds=new Float32Array(220);for(let i=0;i<220;i++)inflowSeeds[i]=(i*.618033)%1;
+    const inflowGeometry=new THREE.BufferGeometry();inflowGeometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(220*3),3));inflowGeometry.setAttribute('seed',new THREE.BufferAttribute(inflowSeeds,1));
+    this.inflow=new THREE.Points(inflowGeometry,new THREE.ShaderMaterial({uniforms:{power:{value:0}},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+      vertexShader:'attribute float seed;varying float vSeed;void main(){vSeed=seed;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp((1.5+seed*3.)*14./-mv.z,1.,9.);gl_Position=projectionMatrix*mv;}',
+      fragmentShader:shaderPalette+'varying float vSeed;uniform float power;void main(){float d=length(gl_PointCoord-.5)*2.;gl_FragColor=vec4(mix(p_kamehamehaCyan,p_spiritGlowWhite,vSeed)*2.2,(1.-smoothstep(.4,1.,d))*power);}'}));
+    this.inflow.frustumCulled=false;this.inflow.visible=false;scene.add(this.inflow);
     // Instances begin with identity matrices (full-size rocks at the origin).
     // Keep every effect hidden until update() has written its first valid frame.
     for(const object of [this.root,this.debris,this.spiral])object.visible=false;
@@ -280,6 +287,16 @@ export class VFXDirector {
     }
     // Charge halo: a star of fine rays around the orb, growing with the charge.
     this.halo.update(time,palm,(.28+charge*.55)*(1+.05*Math.sin(time*11)),blast>.01?0:effects*THREE.MathUtils.smoothstep(charge,.1,.8)*.5);
+    this.inflow.visible=charge>.12&&blast<.01&&effects>.01;
+    if(this.inflow.visible){
+      const a=this.inflow.geometry.attributes.position,c=actor.root.position;this.inflow.material.uniforms.power.value=effects*Math.min(1,charge*1.6)*.9;
+      for(let i=0;i<a.count;i++){
+        const seed=(i*.618033)%1,life=(i*.137+time*(.45+charge*.5)*(.8+seed*.4))%1,ease=life*life,angle=i*2.39996+seed*6,startR=1.2+seed*2.4,startY=.15+((i*.37)%1)*1.9;
+        // Start somewhere in the air around the hero, spiral inward and arrive at the palm.
+        const sx=c.x+Math.sin(angle)*startR-palm.x,sz=c.z+Math.cos(angle)*startR-palm.z,turn=life*2.6,cs=Math.cos(turn),sn=Math.sin(turn),k=1-ease;
+        a.setXYZ(i,palm.x+(sx*cs-sz*sn)*k,palm.y+(c.y+startY-palm.y)*k,palm.z+(sx*sn+sz*cs)*k);
+      }a.needsUpdate=true;
+    }
     this.spiral.visible=charge>.04&&effects>.01;
     this.spiral.position.copy(palm);this.spiral.material.uniforms.power.value=effects*charge;
     const spiral=this.spiral.geometry.attributes.position;

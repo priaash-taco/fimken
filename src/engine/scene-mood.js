@@ -5,10 +5,10 @@ import * as THREE from 'three';
 // together instead of each effect reacting on its own.
 const NAMES=['calm','powerUp','charge','release','impact','recovery'];
 export class SceneMood {
-  constructor(){this.state='calm';this.levels=Object.fromEntries(NAMES.map(n=>[n,n==='calm'?1:0]));this.flash=0;this.impactAge=99;this.impactStrength=0;this.impactPoint=new THREE.Vector3();this.sinceIntense=99;}
+  constructor(){this.state='calm';this.levels=Object.fromEntries(NAMES.map(n=>[n,n==='calm'?1:0]));this.flash=0;this.impactAge=99;this.impactStrength=0;this.impactPoint=new THREE.Vector3();this.sinceIntense=99;this.shockAge=99;this.shockPoint=new THREE.Vector3();}
   update(dt,director,music,heroPosition,beamEnd){
     const sig=director.signals||{},state=director.state,power=director.power||0;
-    if(sig.release)this.flash=Math.max(this.flash,1);
+    if(sig.release){this.flash=Math.max(this.flash,1);this.shockAge=0;this.shockPoint.copy(heroPosition);}
     // A hard landing or a heavy hit marks the ground under the hero; the beam marks where it lands.
     const landing=sig.landing?.strength||0,hit=sig.impact?.strength||0;
     if(landing>.55||hit>.75){this.impactAge=0;this.impactStrength=Math.max(landing,hit);this.impactPoint.copy(heroPosition);this.impactPoint.y=0;}
@@ -22,7 +22,7 @@ export class SceneMood {
     if(next==='release'||next==='powerUp'||next==='charge'||next==='impact')this.sinceIntense=0;else this.sinceIntense+=dt;
     this.state=next;
     for(const n of NAMES){const target=n===next?1:0,rate=target>this.levels[n]?(n==='release'||n==='impact'?14:5):(n==='impact'?2.5:1.6);this.levels[n]=THREE.MathUtils.damp(this.levels[n],target,rate,dt);}
-    this.flash*=Math.exp(-dt*14);this.impactAge+=dt;
+    this.flash*=Math.exp(-dt*14);this.impactAge+=dt;this.shockAge+=dt;
     return this;
   }
   // Convenience numbers the rest of the scene reads.

@@ -4,12 +4,20 @@ import { CosmicWorld } from './cosmic-world.js';
 import { rockGeometry } from './rock-geometry.js';
 // The same banded diffuse the hero uses, so rocks and ground sit in the same drawing.
 const celBands = material => { const before = material.onBeforeCompile; material.onBeforeCompile = shader => { before?.call(material, shader);
+  shader.uniforms.energyPos = ENERGY_LIGHT.position; shader.uniforms.energyColor = ENERGY_LIGHT.color; shader.uniforms.energyStrength = ENERGY_LIGHT.strength;
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 energyPos;uniform vec3 energyColor;uniform float energyStrength;');
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
   float envL = max(.0001, dot(reflectedLight.directDiffuse, vec3(.2126,.7152,.0722)));
   float envBand = mix(.22, .58, smoothstep(.24,.30,envL)); envBand = mix(envBand, 1.0, smoothstep(.62,.70,envL));
   reflectedLight.directDiffuse *= mix(1.0, clamp(envBand/envL,.55,1.25), .8);
-  reflectedLight.indirectDiffuse *= .85;`); }; material.customProgramCacheKey = () => 'fimken-env-cel-v1'; };
+  reflectedLight.indirectDiffuse *= .85;
+  // Energy rim: faces turned toward the hero's energy catch hard-banded coloured light.
+  vec3 ePos = (viewMatrix * vec4(energyPos, 1.0)).xyz, eTo = ePos + vViewPosition; float eD = length(eTo);
+  float eN = max(dot(normal, eTo / max(eD, .001)), 0.0) / (1.0 + eD * eD * .22);
+  float eBand = smoothstep(.10, .15, eN) * .55 + smoothstep(.30, .36, eN) * .45;
+  reflectedLight.directDiffuse += diffuseColor.rgb * energyColor * eBand * energyStrength;`); }; material.customProgramCacheKey = () => 'fimken-env-cel-v2'; };
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { ENERGY_LIGHT } from './energy-light.js';
 import { ENVIRONMENT } from './assets.js';
 
 export class EnvironmentDirector {
@@ -107,17 +115,22 @@ export class EnvironmentDirector {
   }
   setQuality(count) { this.dust.geometry.setDrawRange(0, count); }
   // Scene state: dust lifts and drifts, the ground darkens, fog thickens after an impact.
-  setMood(mood, effects) {
+  setMood(mood, effects, wind = { x: 0, z: 0 }) {
+    this.windDrift ??= { x: 0, z: 0 }; this.windDrift.x = THREE.MathUtils.damp(this.windDrift.x, wind.x * 14, 1.5, 1 / 60); this.windDrift.z = THREE.MathUtils.damp(this.windDrift.z, wind.z * 14, 1.5, 1 / 60);
     const lift = mood.dustLift * effects, l = mood.levels;
     this.dust.material.opacity = .35 + lift * .4; this.dust.material.size = .018 + lift * .02;
     this.dustLift = THREE.MathUtils.damp(this.dustLift || 0, lift * .9, 2, 1 / 60);
-    this.floor.material.color.set('#2a2019').multiplyScalar(1 - (l.powerUp * .25 + l.charge * .3 + l.release * .2) * effects);
+    // Dark brown at rest; under blue energy the ground goes cool blue-grey, like the reference.
+    const blue = THREE.MathUtils.clamp(l.charge + l.release * .9, 0, 1) * effects;
+    this.floor.material.color.set('#2a2019').lerp(this.coolGround ??= new THREE.Color('#1c2640'), blue).multiplyScalar(1 - (l.powerUp * .25 + l.charge * .15 + l.release * .1) * effects);
+    this.cosmos.setMood(mood, effects);
     if (!this.inspection) this.scene.fog.density = .026 + l.impact * .01 * effects - l.release * .008 * effects;
   }
   update(time, power) {
     this.cosmos.update(time);
     this.haze.material.uniforms.time.value = time; this.haze.material.uniforms.energy.value = power;
     this.dust.position.y = Math.sin(time * .07) * .15 + (this.dustLift || 0);
+    this.dust.position.x = this.windDrift?.x || 0; this.dust.position.z = this.windDrift?.z || 0;
     this.dust.rotation.y = time * .006;
   }
 }

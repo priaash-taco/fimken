@@ -39,10 +39,10 @@ export class CinematicRenderer {
     // Heat haze, grade, tone mapping and sRGB conversion share one full-screen pass.
     // The arithmetic and its order match the former separate passes.
     this.finish = new ShaderPass(new THREE.RawShaderMaterial({
-      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
+      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
       vertexShader:'precision highp float;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;attribute vec3 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`precision highp float;
-      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
+      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
       #include <tonemapping_pars_fragment>
       #include <colorspace_pars_fragment>
       void main(){vec2 uv=vUv;
@@ -50,7 +50,10 @@ export class CinematicRenderer {
        float ring=smoothstep(.88,1.10,d)*(1.-smoothstep(1.45,1.9,d));
        float flow=sin(vUv.y*160.-time*5.+sin(vUv.x*93.+time)*2.);
        uv=clamp(vUv+vec2(flow,sin(vUv.x*117.+time*3.)*.3)*.0012*strength*ring,vec2(.001),vec2(.999));}
-      vec3 c=texture2D(tDiffuse,uv).rgb;float l=dot(c,vec3(.2126,.7152,.0722));
+      // Shockwave ripple: a ring leaves the hero and bends the picture as it passes.
+      float ringGlow=0.;
+      if(shockS>0.){vec2 sd=vUv-center;sd.x*=aspect;float sr=length(sd);float ring=exp(-pow((sr-shockR)/.05,2.));vec2 dir=sd/max(sr,.0001);dir.x/=aspect;uv=clamp(uv-dir*ring*shockS*.035,vec2(.001),vec2(.999));ringGlow=ring*shockS;}
+      vec3 c=texture2D(tDiffuse,uv).rgb+ringGlow*vec3(.18,.3,.5);float l=dot(c,vec3(.2126,.7152,.0722));
       c=mix(vec3(l),c,1.04);c*=vec3(1.+warmth,1.,1.-warmth*.55);
       c=mix(c,c*vec3(.72,.84,1.25)+vec3(0.,.01,.05)*l,cold);
       // Attack treatment: the frame edges fall away, contrast rises, a release whites out for a beat.
@@ -123,7 +126,7 @@ export class CinematicRenderer {
     finish.radius.value.set(radius*.62/this.camera.aspect,radius);
     this.heatStrength = this.quality!=='low' && effects>.001 && power>.3 ? effects*(power-.3) : 0;
     finish.strength.value=this.heatStrength; finish.time.value=sceneTime;
-    finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
+    finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.shockR.value=this.shockR||0; finish.shockS.value=this.shockS||0; finish.aspect.value=this.camera.aspect; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
     const energy = Math.max(0, power - .25) / .75;
     this.bloom.strength = (.18 + energy * .2) * effects;
     this.bloom.radius = .18 + energy * .22;
