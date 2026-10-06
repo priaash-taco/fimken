@@ -3,15 +3,15 @@ import {HeroMotionPhysics} from './hero-motion-physics.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // How much each move may change between performances: mirrored left-to-right, and turned to
 // a new heading by up to this many radians. Moves tied to one side or one camera stay as authored.
-const VARIATION={relaxedIdle:{turn:.3},alert:{mirror:true,turn:.8},stretch:{turn:.4},neckRoll:{turn:.4},wristWarmup:{turn:.4},stepForward:{mirror:true,turn:.6},stepBack:{mirror:true,turn:.6},shuffle:{mirror:true,turn:.9},vanish:{mirror:true,turn:1.2},frontKick:{mirror:true,turn:.7},backKick:{mirror:true,turn:.6},highKick:{mirror:true,turn:.7},heavyKick:{mirror:true,turn:.7},airCombo:{mirror:true,turn:.6},hardLanding:{mirror:true,turn:.8},threePoint:{mirror:true,turn:.8},bounce:{mirror:true,turn:.4},combatIdle:{mirror:true,turn:.4},reset:{turn:.3},strikes:{mirror:true,turn:.75},heavy:{mirror:true,turn:.75},dash:{mirror:true,turn:.95},flying:{mirror:true,turn:.75},flip:{mirror:true,turn:.85},
+const VARIATION={stanceShift:{turn:.4},jabCross:{mirror:true,turn:.7},flurry:{mirror:true,turn:.7},trainingCombo:{mirror:true,turn:.6},barrage:{mirror:true,turn:.6},slip:{mirror:true,turn:.5},duck:{mirror:true,turn:.5},forearmBlock:{mirror:true,turn:.6},energyBlock:{turn:.5},dashBack:{mirror:true,turn:.9},oneHandBlast:{mirror:true,turn:.7},doublePalm:{turn:.7},energyThrow:{mirror:true,turn:.7},teleport:{mirror:true,turn:1.1},exhaustion:{turn:.4},calmPost:{turn:.4},relaxedIdle:{turn:.3},alert:{mirror:true,turn:.8},stretch:{turn:.4},neckRoll:{turn:.4},wristWarmup:{turn:.4},stepForward:{mirror:true,turn:.6},stepBack:{mirror:true,turn:.6},shuffle:{mirror:true,turn:.9},vanish:{mirror:true,turn:1.2},frontKick:{mirror:true,turn:.7},backKick:{mirror:true,turn:.6},highKick:{mirror:true,turn:.7},heavyKick:{mirror:true,turn:.7},airCombo:{mirror:true,turn:.6},hardLanding:{mirror:true,turn:.8},threePoint:{mirror:true,turn:.8},bounce:{mirror:true,turn:.4},combatIdle:{mirror:true,turn:.4},reset:{turn:.3},strikes:{mirror:true,turn:.75},heavy:{mirror:true,turn:.75},dash:{mirror:true,turn:.95},flying:{mirror:true,turn:.75},flip:{mirror:true,turn:.85},
   reaction:{mirror:true,turn:.6},airborne:{mirror:true,turn:.5},flight:{mirror:true,turn:0},spin:{turn:.6},hover:{turn:.5}};
 // Moves by intensity. Silence draws from tiers 0-2 (a training session); with sound the tier
 // follows the music's energy, so quiet passages warm up and peaks go all out.
-const TIERS=[['relaxedIdle','combatIdle','alert','neckRoll','wristWarmup','stretch','reset'],['bounce','stepForward','stepBack','shuffle','combatIdle','alert'],
-  ['strikes','frontKick','highKick','spin','bounce','vanish','stepForward','shuffle'],['heavy','heavyKick','backKick','dash','flying','flip','airCombo','hardLanding','threePoint','flight','vanish'],
-  ['powerup','blast','transformation','airCombo','flying','heavyKick','backKick']];
+const TIERS=[['relaxedIdle','combatIdle','alert','neckRoll','wristWarmup','stretch','reset','calmPost','exhaustion'],['bounce','stepForward','stepBack','shuffle','combatIdle','alert','stanceShift','slip','duck','forearmBlock'],
+  ['strikes','jabCross','flurry','frontKick','highKick','spin','bounce','vanish','stepForward','shuffle','dashBack','oneHandBlast','doublePalm','trainingCombo'],['heavy','heavyKick','backKick','dash','flying','flip','airCombo','hardLanding','threePoint','flight','vanish','barrage','energyThrow','teleport','energyBlock'],
+  ['powerup','blast','beamStruggle','transformation','airCombo','flying','heavyKick','backKick','barrage']];
 const TIER_OF=Object.fromEntries(TIERS.flatMap((ids,t)=>ids.map(id=>[id,t])));
-const SOFT=new Set(['relaxedIdle','alert','neckRoll','wristWarmup','stretch','bounce','combatIdle','stepForward','stepBack','shuffle','reset','stance','hover']);
+const SOFT=new Set(['calmPost','exhaustion','stanceShift','slip','duck','forearmBlock','dashBack','relaxedIdle','alert','neckRoll','wristWarmup','stretch','bounce','combatIdle','stepForward','stepBack','shuffle','reset','stance','hover']);
 const flipX=v=>[-v[0],v[1],v[2]];
 function mirror(move){
   for(const {pose:p} of move.keys){

@@ -37,7 +37,7 @@ const frames = await page.evaluate(() => ({ means: window.__frames.means, scales
 const sweep = await page.evaluate(async () => {
   const s = window.__fimken, probe = document.createElement('canvas'); probe.width = 48; probe.height = 27;
   const c = probe.getContext('2d', { willReadFrequently: true }), black = []; let count = 0; s.pipeline.comparing = true; s.pipeline.adaptive = 1; s.pipeline.resize();
-  for (const id of ['powerup', 'charge', 'blast', 'dash', 'strikes', 'heavy', 'flying', 'spin', 'flip', 'flight', 'hover', 'airborne', 'reaction', 'transformation', 'relaxedIdle', 'alert', 'stretch', 'neckRoll', 'wristWarmup', 'bounce', 'combatIdle', 'stepForward', 'stepBack', 'shuffle', 'vanish', 'frontKick', 'backKick', 'highKick', 'heavyKick', 'airCombo', 'hardLanding', 'threePoint', 'reset']) {
+  for (const id of s.moveIds()) {
     s.reviewAction(0, id); const duration = s.director.move.duration;
     for (let t = 0; t <= duration + 1e-6; t += .05) {
       s.reviewAction(+t.toFixed(2), id); s.cinematography.update(0, s.director, s.followPoint(), s.view, true);

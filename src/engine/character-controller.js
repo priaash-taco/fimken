@@ -125,7 +125,11 @@ export class CharacterController {
       this.vrm.update(dt);
     }
     // Authored pose -> life layer (lag, noise, breathing, saccades) -> rig. Paused frames (dt 0) pass the pose through.
-    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;this.rigControls.apply(this.livePose,time,music);}
+    // Optional anime pacing: during fast action the body holds every other frame while everything else runs at full rate.
+    this.frameCount=(this.frameCount||0)+1;const fastAction=this.twos&&['punch','kick','dash'].includes(state)&&dt>0;
+    if(fastAction&&this.frameCount%2){this.root.updateMatrixWorld(true);return;}
+    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;this.rigControls.apply(this.livePose,time,music);
+      this.root.updateMatrixWorld(true);this.heroFinish?.updateSway(dt,this.anchor('head',new THREE.Vector3()),Math.max(0,(this.showcasePose.power||0)-.4));}
     // Expressions are two procedural shape keys ("focus", "shout"); they ease toward the pose.
     if(this.showcasePose){
       if(!this.morphs){this.morphs=[];this.model.traverse(o=>{if(o.morphTargetDictionary)this.morphs.push(o);});}

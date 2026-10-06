@@ -12,7 +12,7 @@ const view = option('view', fx ? 'shot' : 'quarter');
 const frames = Number(option('frames', 16));
 const at = option('at', '') ? option('at', '').split(',').map(Number) : null;
 const all = ['powerup', 'charge', 'blast', 'dash', 'strikes', 'heavy', 'flying', 'spin', 'flip', 'flight', 'bounce', 'combatIdle', 'stepForward', 'stepBack', 'shuffle', 'vanish', 'frontKick', 'backKick', 'highKick', 'heavyKick', 'airCombo', 'hardLanding', 'threePoint', 'reset', 'hover', 'airborne', 'reaction', 'transformation'];
-const moves = option('moves', '') ? option('moves', '').split(',') : all;
+let moves = option('moves', '') ? option('moves', '').split(',') : all;
 const out = option('out', 'art/previews/motion');
 const base = `http://127.0.0.1:${option('port', process.env.FIMKEN_PORT || 5173)}/`;
 mkdirSync(out, { recursive: true });
@@ -25,6 +25,7 @@ page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(base + (fx ? '' : '?inspection=1'));
 await page.waitForFunction(() => document.querySelector('#battle')?.dataset.ready === 'true' && window.__fimken, null, { timeout: 60000 });
 
+if (!option('moves', '')) moves = await page.evaluate(() => window.__fimken.moveIds());
 for (const id of moves) {
   const sheet = await page.evaluate(async ({ id, view, frames, at, fx }) => {
     const scene = window.__fimken, canvas = document.querySelector('#battle');

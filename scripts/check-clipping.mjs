@@ -15,7 +15,7 @@ const r = await page.evaluate(() => new Promise(async done => { const s = window
   const limbs = () => ({ forearmL: [P('leftLowerArm'), P('leftHand')], forearmR: [P('rightLowerArm'), P('rightHand')], shinL: [P('leftLowerLeg'), P('leftFoot')], shinR: [P('rightLowerLeg'), P('rightFoot')], torso: [P('hips'), P('neck')], head: [P('head'), P('head')] });
   const pts = side => ['Hand', 'IndexDistal', 'PinkyDistal', 'ThumbDistal', 'IndexProximal'].map(k => b[side + k]).filter(Boolean).map(o => o.getWorldPosition(new o.position.constructor()));
   const torso = () => ['hips', 'spine', 'chest', 'neck'].map(k => b[k]).map(o => o.getWorldPosition(new o.position.constructor()));
-  const ids = ['stance', 'relaxedIdle', 'alert', 'stretch', 'neckRoll', 'wristWarmup', 'bounce', 'combatIdle', 'stepForward', 'stepBack', 'shuffle', 'vanish', 'strikes', 'heavy', 'frontKick', 'backKick', 'highKick', 'heavyKick', 'spin', 'dash', 'flying', 'flip', 'flight', 'hover', 'airborne', 'airCombo', 'hardLanding', 'threePoint', 'reaction', 'reset', 'powerup', 'transformation', 'charge', 'blast'];
+  const ids = s.moveIds();
   const out = {}; s.autoCamera = false;
   for (const id of ids) { s.practice(id); let minHand = 9, minTorso = 9, tHand = 0, tTorso = 0, minArmTorso = 9, minArms = 9, minLegs = 9, minHandHead = 9; const t0 = performance.now();
     await new Promise(r => { const tick = () => { const L = pts('left'), R = pts('right'), T = torso();

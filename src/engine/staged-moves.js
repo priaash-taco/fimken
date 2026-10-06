@@ -30,7 +30,79 @@ export function createStagedMoves({stance,guard,pivot,chamber,kick}) {
  // Flight: the whole body pitches forward (negative flip), one fist leading.
  const soar=pose(guard,{fist:.95,focus:.7,lift:.45,flip:-1.15,crouch:0,lean:.12,headPitch:-.55,guard:0,power:.42,left:[.2,1.62,.42],right:[-.36,1.02,-.2],rightElbow:[-.8,1,-.5],leftFoot:[.04,.10,-.42],rightFoot:[-.04,.06,-.48],trails:[.3,.3,.3]});
  const dash=pose(guard,{fist:.7,lift:.10,crouch:.12,lean:.38,bank:-.09,headPitch:-.12,left:[.36,.99,-.14],right:[-.36,1.07,-.18],leftFoot:[0,.08,-.12],rightFoot:[0,.04,-.2],trails:[.25,.25,.25]});
+// ---- Remaining movement-bible entries (numbers refer to art/hero/MOVEMENT-BIBLE.md).
+ const mirrorGuard=pose(guard,{leftFoot:[0,0,-.09],rightFoot:[0,0,.09],left:[.15,1.30,.30],right:[-.17,1.36,.46],leftElbow:[.55,.55,.05],rightElbow:[-.5,.55,.15],twist:-.04});
+ const bodyR=pose(guard,{fist:1,focus:1,crouch:.2,twist:.3,hipYaw:.15,right:[-.12,1.0,.36],rightElbow:[-.75,.75,.1],trails:[0,1,0],hitStop:1});
+ const loadJab=pose(guard,{twist:.12,left:[.27,1.29,.1],crouch:.13});
+ const duckLow=pose(guard,{crouch:.34,lean:.28,headPitch:.25,hipShift:[.06,0]});
+ const kneeStrike=pose(guard,{travel:[0,.16],rightFoot:[0,.62,.28],rightKnee:[-.2,1.25,.9],lean:.12,left:[.3,1.1,.3],right:[-.25,1.2,.2],trails:[0,0,1],hitStop:1});
+ const block=pose(guard,{fist:.8,left:[.02,1.33,.33],leftElbow:[.35,1.0,.15],right:[-.2,1.15,.3],twist:.2,shoulderDrive:.15,crouch:.13});
+ const eblock=pose(guard,{fist:.9,focus:1,crouch:.2,lean:-.12,left:[.09,1.42,.3],right:[-.09,1.4,.28],leftElbow:[.6,1.0,.1],rightElbow:[-.6,1.0,.1],tension:1,shoulderLift:.06});
+ // 39 Rapid barrage: eight alternating punches in about a second and a half, chest rotating, then one heavy straight.
+ const barrageKeys=[K(0,guard,{}),K(.2,loadJab,{})];let bt=.3;
+ for(let i=0;i<8;i++){const side=i%2?p2:p1;barrageKeys.push(K(bt,side,{twist:(i%2?.2:-.16)}),K(bt+.035,side,{twist:(i%2?.2:-.16)}));bt+=.17;}
+ barrageKeys.push(K(bt+.1,heavyLoad,{}),K(bt+.32,heavyHit,{}),K(bt+.37,heavyHit,{}),K(bt+.6,guard,{}),K(bt+1.1,guard,{}));
+ const barrageCues=[...Array.from({length:8},(_,i)=>({at:+(.3+i*.17).toFixed(2),type:'impact',limb:i%2?'rightHand':'leftHand',strength:.3+i*.04})),{at:+(bt+.32).toFixed(2),type:'impact',limb:'rightHand',strength:.95}];
+ const extra={
+  // 8 Stance switch: weight through the hips, rear foot slides, front foot pivots, torso follows.
+  stanceShift:move('Stance switch',[K(0,guard,{}),K(.22,guard,{hipShift:[-.05,0],crouch:.14,leftFoot:[0,0,.05],rightFoot:[0,0,-.05]},'guard','Shift weight through the hips'),
+   K(.42,guard,{hipShift:[-.06,0],crouch:.15,leftFoot:[.02,.03,-.02],rightFoot:[0,0,-.02],twist:.1},'guard','Rear foot slides, front foot pivots'),K(.62,mirrorGuard,{hipShift:[.03,0],crouch:.14},'guard','Torso follows'),K(.9,mirrorGuard,{})]),
+  // 14 Jab and cross, then again faster.
+  jabCross:move('Jab and cross',[K(0,guard,{}),K(.18,loadJab,{}),K(.30,p1,{}),K(.35,p1,{}),K(.50,guard,{crouch:.14,twist:.14,hipYaw:.1},'guard','Recoil; rear hip loads'),K(.62,p2,{}),K(.67,p2,{}),
+   K(.80,p2,{twist:.36,hipYaw:.17,lean:.17,shoulderDrive:.24},'recover','Shoulder overshoots'),K(.95,guard,{}),K(1.05,loadJab,{}),K(1.14,p1,{}),K(1.18,p1,{}),K(1.27,p2,{}),K(1.31,p2,{}),K(1.5,guard,{}),K(1.9,guard,{})],
+   [{at:.3,type:'impact',limb:'leftHand',strength:.4},{at:.62,type:'impact',limb:'rightHand',strength:.5},{at:1.14,type:'impact',limb:'leftHand',strength:.5},{at:1.27,type:'impact',limb:'rightHand',strength:.65}]),
+  // 17 Punch flurry: jab, cross, hook, body shot, uppercut, two rapid straights.
+  flurry:move('Punch flurry',[K(0,guard,{}),K(.2,loadJab,{}),K(.32,p1,{}),K(.36,p1,{}),K(.46,guard,{}),K(.56,p2,{}),K(.60,p2,{}),K(.72,guard,{crouch:.17}),K(.84,hook,{}),K(.88,hook,{}),K(.98,guard,{crouch:.2,right:[-.2,1.0,.2]}),
+   K(1.1,bodyR,{}),K(1.14,bodyR,{}),K(1.26,guard,{crouch:.22}),K(1.4,upper,{}),K(1.44,upper,{}),K(1.56,guard,{}),K(1.66,p1,{}),K(1.69,p1,{}),K(1.74,p2,{}),K(1.77,p2,{}),K(1.95,guard,{crouch:.14}),K(2.5,guard,{})],
+   [[.32,'leftHand'],[.56,'rightHand'],[.84,'leftHand'],[1.1,'rightHand'],[1.4,'rightHand'],[1.66,'leftHand'],[1.74,'rightHand']].map(([at,limb],i)=>({at,type:'impact',limb,strength:.35+i*.08}))),
+  // 22 Training combo: jab, cross, duck, hook, step, knee, roundhouse, land, two punches, step back.
+  trainingCombo:move('Training combo',[K(0,guard,{}),K(.25,loadJab,{}),K(.36,p1,{}),K(.40,p1,{}),K(.55,guard,{}),K(.66,p2,{}),K(.70,p2,{}),K(.85,guard,{}),K(1.0,duckLow,{}),K(1.15,duckLow,{twist:.1}),
+   K(1.35,hook,{}),K(1.40,hook,{}),K(1.55,guard,{crouch:.15}),K(1.7,guard,{leftFoot:[0,.05,.2],travel:[0,.14]}),K(1.95,kneeStrike,{}),K(2.0,kneeStrike,{}),
+   K(2.2,pivot,{travel:[0,.16],headYaw:.5}),K(2.45,chamber,{travel:[0,.16],headYaw:.2}),K(2.68,kick,{travel:[0,.16]}),K(2.74,kick,{travel:[0,.16]}),K(2.95,chamber,{travel:[0,.16],yaw:Math.PI*1.9,rightFoot:[.09,.35,.14]}),K(3.2,guard,{travel:[0,.16],yaw:Math.PI*2,crouch:.2}),
+   K(3.45,p1,{travel:[0,.16],yaw:Math.PI*2}),K(3.49,p1,{travel:[0,.16],yaw:Math.PI*2}),K(3.55,p2,{travel:[0,.16],yaw:Math.PI*2}),K(3.59,p2,{travel:[0,.16],yaw:Math.PI*2}),
+   K(3.85,guard,{travel:[0,.12],yaw:Math.PI*2,rightFoot:[0,.05,-.2]}),K(4.2,guard,{travel:[0,.0],yaw:Math.PI*2}),K(4.6,guard,{travel:[0,.0],yaw:Math.PI*2})],
+   [{at:.36,type:'impact',limb:'leftHand',strength:.4},{at:.66,type:'impact',limb:'rightHand',strength:.5},{at:1.35,type:'impact',limb:'leftHand',strength:.6},{at:1.95,type:'impact',limb:'rightFoot',strength:.7},{at:2.68,type:'impact',limb:'rightFoot',strength:.85},{at:3.2,type:'landing',strength:.4},{at:3.45,type:'impact',limb:'leftHand',strength:.4},{at:3.55,type:'impact',limb:'rightHand',strength:.5}]),
+  barrage:move('Punch barrage',barrageKeys,barrageCues),
+  // 23 Slip and 24 duck: out of the line of attack, then straight back.
+  slip:move('Defensive slip',[K(0,guard,{}),K(.12,guard,{bank:.2,twist:.08,headYaw:-.15,hipShift:[.07,0],lean:-.03,crouch:.12}),K(.28,guard,{bank:.2,twist:.08,headYaw:-.15,hipShift:[.07,0],lean:-.03,crouch:.12}),K(.55,guard,{})]),
+  duck:move('Duck and weave',[K(0,guard,{}),K(.16,duckLow,{}),K(.42,duckLow,{hipShift:[-.06,0],twist:.1,headPitch:.2}),K(.7,guard,{crouch:.12,hipShift:[-.04,0]}),K(1.0,guard,{})]),
+  // 25 Forearm block, 26 two-arm energy block.
+  forearmBlock:move('Forearm block',[K(0,guard,{}),K(.1,block,{}),K(.2,block,{lean:-.1,twist:.28,travel:[0,-.08]},'recoil','Body turns with the impact'),K(.5,block,{lean:-.04,travel:[0,-.1]}),K(.9,guard,{travel:[0,-.1]})],[{at:.14,type:'landing',strength:.3}]),
+  energyBlock:move('Energy block',[K(0,guard,{}),K(.14,eblock,{}),K(.24,eblock,{shoulderDrive:.09,travel:[0,-.1]}),K(.32,eblock,{shoulderDrive:-.09,travel:[0,-.16]}),K(.44,eblock,{shoulderDrive:.09,travel:[0,-.22]}),K(.56,eblock,{shoulderDrive:-.09,travel:[0,-.28]}),
+   K(.9,eblock,{travel:[0,-.3]}),K(1.15,eblock,{left:[.5,1.2,.2],right:[-.5,1.2,.2],lean:.02,fist:.3,tension:.3,travel:[0,-.3]},'recover','Arms separate'),K(1.6,guard,{travel:[0,-.3]})],[{at:.16,type:'landing',strength:.5}]),
+  // 29 Dash back: head and chest first, rear leg pushes, feet settle, hands straight to guard.
+  dashBack:move('Dash backward',[K(0,guard,{}),K(.14,guard,{lean:-.12,crouch:.19,headPitch:.1}),K(.24,guard,{lift:.1,lean:-.28,crouch:.1,headPitch:.12,travel:[0,-.2],trails:[.25,.25,.25]},'dash','Chest leads; rear leg drives'),
+   K(.52,guard,{lift:.1,lean:-.2,travel:[0,-.85],trails:[.25,.25,.25]},'dash','Fast travel'),K(.7,guard,{travel:[0,-.9],crouch:.2},'land','Feet settle under the body'),K(1.2,guard,{travel:[0,-.9]})],[{at:.7,type:'landing',strength:.45}]),
+  // 51 Beam struggle: pressure, push back, deeper, push again, final surge.
+  beamStruggle:move('Beam struggle',[K(0,guard,{},'charge','Set stance','chargeHero'),K(.5,charge,{charge:.4,power:.5},'charge','Charge','chargeHero'),K(.9,charge,{},'charge','Hold','chargeHero'),
+   K(1.0,charge,{hipYaw:.10,twist:-.20,shoulderDrive:.18},'charge','Hips initiate','beamHero'),K(1.08,release,{},'blast','Release','beamHero'),
+   K(1.4,release,{lean:-.12,crouch:.17,left:[.07,1.26,.34],right:[-.07,1.26,.34],headPitch:.2,shoulderDrive:.1,tension:1,travel:[0,-.12]},'blast','Pressure builds','beamImpact'),K(1.9,release,{lean:.1,crouch:.12,travel:[0,-.12]},'blast','Push back','beamImpact'),
+   K(2.4,release,{lean:-.14,crouch:.19,headPitch:.28,tension:1,left:[.08,1.25,.32],right:[-.08,1.25,.32],travel:[0,-.26]},'blast','Deeper under pressure','beamImpact'),K(2.9,release,{lean:.05,crouch:.14,travel:[0,-.26]},'blast','Push again','beamImpact'),
+   K(3.3,release,{lean:.26,crouch:.08,headPitch:-.1,left:[.06,1.3,.55],right:[-.06,1.3,.55],travel:[0,-.1],shoulderDrive:.26},'blast','Final extension','beamImpact'),K(3.9,release,{beam:0,charge:.05,power:.45},'recover','Release pressure','beamImpact'),K(5.0,guard,{},'idle','Settle','actionWide')],
+   [{at:1.08,type:'release',strength:1}]),
+  // 52 One-hand blast and 53 double palm: pull back, palm opens, thrust, small recoil.
+  oneHandBlast:move('One-hand blast',[K(0,guard,{}),K(.3,guard,{fist:.4,twist:-.15,right:[-.35,1.12,-.04],rightElbow:[-.85,1.1,-.4],left:[.3,1.25,.25],crouch:.13}),K(.6,guard,{fist:.4,twist:-.22,right:[-.38,1.12,-.06],rightElbow:[-.85,1.1,-.4],left:[.3,1.25,.25],crouch:.14}),
+   K(.7,guard,{fist:0,twist:.3,hipYaw:.12,lean:.14,right:[-.1,1.34,.55],rightElbow:[-.7,1.2,.1],left:[.3,1.2,.2],shoulderDrive:.22,trails:[0,1,0],hitStop:1}),K(.76,guard,{fist:0,twist:.3,hipYaw:.12,lean:.14,right:[-.1,1.34,.55],rightElbow:[-.7,1.2,.1],left:[.3,1.2,.2],shoulderDrive:.22,trails:[0,1,0],hitStop:1}),
+   K(.95,guard,{fist:0,lean:-.08,right:[-.1,1.3,.5],left:[.3,1.2,.2]},'recover','Small recoil'),K(1.3,guard,{})],[{at:.7,type:'impact',limb:'rightHand',strength:.8}]),
+  doublePalm:move('Double palm blast',[K(0,guard,{}),K(.3,guard,{fist:.3,left:[.3,1.0,.1],right:[-.3,1.0,.1],leftElbow:[.9,.9,-.4],rightElbow:[-.9,.9,-.4],shoulderLift:.06,crouch:.15,tension:.8}),K(.55,guard,{fist:.3,left:[.3,1.0,.08],right:[-.3,1.0,.08],leftElbow:[.9,.9,-.4],rightElbow:[-.9,.9,-.4],shoulderLift:.06,crouch:.16,tension:.8}),
+   K(.65,guard,{fist:0,left:[.12,1.27,.55],right:[-.12,1.27,.55],lean:.15,shoulderDrive:.2,trails:[1,1,0],hitStop:1}),K(.71,guard,{fist:0,left:[.12,1.27,.55],right:[-.12,1.27,.55],lean:.15,shoulderDrive:.2,trails:[1,1,0],hitStop:1}),K(.95,guard,{fist:0,lean:-.1,left:[.14,1.24,.5],right:[-.14,1.24,.5]},'recover','Chest recoils'),K(1.4,guard,{})],
+   [{at:.65,type:'impact',limb:'leftHand',strength:.8},{at:.65,type:'impact',limb:'rightHand',strength:.8}]),
+  // 54 Energy throw: wind back, torso rotates, swing, wrist snap, follow-through across the body.
+  energyThrow:move('Energy throw',[K(0,guard,{}),K(.35,guard,{fist:.5,twist:.34,hipYaw:-.15,lean:-.05,right:[-.55,1.42,-.25],rightElbow:[-.9,1.5,-.4],left:[.3,1.15,.4],shoulderDrive:-.1}),K(.5,guard,{fist:.5,twist:.38,hipYaw:-.18,lean:-.06,right:[-.58,1.44,-.28],rightElbow:[-.9,1.5,-.4],left:[.3,1.15,.4]}),
+   K(.62,guard,{fist:0,twist:-.42,hipYaw:.2,lean:.2,right:[.06,1.3,.55],rightElbow:[-.6,1.3,.2],left:[.3,1.15,.4],trails:[0,1,0],hitStop:1}),K(.68,guard,{fist:0,twist:-.42,hipYaw:.2,lean:.2,right:[.06,1.3,.55],rightElbow:[-.6,1.3,.2],left:[.3,1.15,.4],trails:[0,1,0],hitStop:1}),
+   K(.9,guard,{fist:0,twist:-.5,lean:.22,right:[.45,1.0,.3],rightElbow:[0,.9,.2],left:[.3,1.15,.4]},'recover','Follow through across the body'),K(1.4,guard,{})],[{at:.62,type:'impact',limb:'rightHand',strength:.8}]),
+  // 55 Teleport: forehead gesture, a still beat, gone, already in stance at the destination.
+  teleport:move('Teleport',[K(0,guard,{}),K(.3,guard,{fist:.2,focus:1,right:[-.08,1.6,.2],rightElbow:[-.7,1.5,.1],headPitch:.1,left:[.3,1.15,.3],crouch:.1}),K(.82,guard,{fist:.2,focus:1,right:[-.08,1.6,.2],rightElbow:[-.7,1.5,.1],headPitch:.1,left:[.3,1.15,.3],crouch:.1}),
+   K(.88,guard,{travel:[-.9,.25],trails:[.5,.5,.5],lean:.1,crouch:.18,headYaw:.3}),K(.95,guard,{travel:[-.9,.25],trails:[.5,.5,.5],lean:.1,crouch:.18,headYaw:.3}),K(1.3,guard,{travel:[-.9,.25]}),K(1.7,guard,{travel:[-.9,.25]})],[{at:.88,type:'landing',strength:.3}]),
+  // 58 Exhaustion and 59 calm after the fight.
+  exhaustion:move('Exhaustion',[K(0,guard,{}),K(.5,stance,{lean:.33,crouch:.2,headPitch:.4,left:[.2,.65,.1],right:[-.2,.65,.1],leftElbow:[.6,.7,-.1],rightElbow:[-.6,.7,-.1],fist:.1,shoulderLift:.05}),
+   K(1.3,stance,{lean:.36,crouch:.21,headPitch:.42,left:[.2,.65,.1],right:[-.2,.65,.1],leftElbow:[.6,.7,-.1],rightElbow:[-.6,.7,-.1],fist:.1,shoulderLift:.09}),K(2.1,stance,{lean:.34,crouch:.2,headPitch:.4,left:[.2,.65,.1],right:[-.2,.65,.1],leftElbow:[.6,.7,-.1],rightElbow:[-.6,.7,-.1],fist:.1,shoulderLift:.07}),
+   K(2.8,stance,{lean:.15,headPitch:.1,shoulderLift:-.04}),K(3.3,stance,{shoulderLift:.12,twist:.1}),K(3.8,stance,{shoulderLift:.12,twist:-.1}),K(4.3,guard,{})],[],true),
+  calmPost:move('After the fight',[K(0,guard,{}),K(.8,stance,{shoulderLift:-.03,fist:.1,headYaw:.5,headPitch:.25,footControl:1,leftFoot:[-.05,0,0],rightFoot:[.05,0,0]}),K(2.4,stance,{shoulderLift:-.03,fist:.1,headYaw:.5,headPitch:.3,footControl:1,leftFoot:[-.05,0,0],rightFoot:[.05,0,0]}),
+   K(3.4,stance,{headPitch:-.05,headYaw:.2,lean:-.02,footControl:1,leftFoot:[-.05,0,0],rightFoot:[.05,0,0]}),K(4.4,stance,{})],[],true),
+ };
  return {
+  ...extra,
   powerup:move('Power-up',[
    K(0,stance,{},'powerup','Begin planted','powerBuild'),K(.5,loaded,{power:.30},'powerup','Widen feet, bend knees, draw hands to hips','powerBuild'),
    K(1.5,loaded,{lean:-.025,headPitch:.26,power:.6,tension:1},'powerup','Retract elbows, lift chest, lower head','powerPeak'),

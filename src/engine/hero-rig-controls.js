@@ -151,11 +151,17 @@ export class HeroRigControls {
     const sway=Math.sin(time*1.65)*.012*idle;
     const hoverWeight=THREE.MathUtils.smoothstep(p.lift,0,.15);
     const tremor=Math.sin(time*19)*Math.sin(time*13)*.003*Math.max(p.tension||0,Math.max(0,p.power-.5))*(1-(p.hitStop||0));
+    // Squash and stretch (applied after every solve, see the end of apply): compress with crouch depth, stretch with vertical speed.
+    const dtSS=this.lastTime==null?0:Math.min(.1,Math.max(0,time-this.lastTime));this.lastTime=time;
+    const vy=dtSS>0?(p.lift-(this.lastLift??p.lift))/dtSS:0;this.lastLift=p.lift;
+    this.stretch=THREE.MathUtils.damp(this.stretch||0,THREE.MathUtils.clamp(vy*.018-p.crouch*.16,-.075,.06),14,Math.max(dtSS,1e-3));
+    root.scale.set(1,1,1);
     root.rotation.y=(actor.definition.facing||0)+(p.yaw||0);
     const pivot=this.feet.left.clone(),rotated=pivot.clone().applyAxisAngle(Y,p.yaw||0);
     root.position.x=(p.travel?.[0]||0)+(pivot.x-rotated.x)*(p.pivot||0);
     root.position.z=(p.travel?.[1]||0)+(pivot.z-rotated.z)*(p.pivot||0);
     root.position.y=p.lift+Math.sin(time*1.8)*.025*hoverWeight;
+
     // Somersault about the body's centre, a metre above the feet.
     const flip=p.flip||0;root.rotation.x=-flip;root.position.y+=1-Math.cos(flip);root.position.z+=Math.sin(flip)*Math.cos(root.rotation.y);root.position.x+=Math.sin(flip)*Math.sin(root.rotation.y);
     root.updateMatrixWorld(true);
@@ -187,6 +193,10 @@ export class HeroRigControls {
     for(const side of ['left','right']){this.solveLeg(side,feet[side],p,hoverWeight);this.solveArm(side,hands[side],p);}
     this.separateLimbs(p,hands,feet);
     for(const side of ['left','right']){this.solveLeg(side,feet[side],p,hoverWeight);this.solveArm(side,hands[side],p);}
+    // Squash and stretch last, so IK never sees a skewed root. The root shifts so the support foot
+    // (or the point between both feet) stays exactly where the unscaled pose put it.
+    {const sy=1+this.stretch,sxz=1/Math.sqrt(sy),anchor=(p.pivot||0)>.5?this.feet.left:this.feet.left.clone().add(this.feet.right).multiplyScalar(.5);
+     root.scale.set(sxz,sy,sxz);root.position.add(new THREE.Vector3(anchor.x*(1-sxz),anchor.y*(1-sy),anchor.z*(1-sxz)).applyAxisAngle(Y,root.rotation.y));}
     root.updateMatrixWorld(true);
     this.center.copy(this.bones.leftHand.getWorldPosition(new THREE.Vector3())).add(this.bones.rightHand.getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);
     // Aimed slightly down, so the beam meets the ground in the distance.

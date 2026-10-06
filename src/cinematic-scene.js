@@ -14,6 +14,7 @@ import { VFXDirector } from './engine/vfx-director.js';
 import { CinematicRenderer, QUALITY } from './engine/renderer.js';
 import { PerformanceMonitor } from './engine/performance-monitor.js';
 import { SceneMood } from './engine/scene-mood.js';
+import { SHOWCASE_MOVES } from './engine/showcase-director.js';
 import { GroundMarks } from './engine/ground-marks.js';
 import { ENERGY_LIGHT } from './engine/energy-light.js';
 
@@ -46,6 +47,9 @@ export class TrainingScene {
     this.scene.add(this.actor.root);
     this.vfx = new VFXDirector(this.scene);
     this.mood = new SceneMood(); this.marks = new GroundMarks(this.scene);
+    this.moveIds = () => Object.keys(SHOWCASE_MOVES).filter(id => !['sequence', 'stance', 'charge-pose', 'beam-pose'].includes(id));
+    // Poses on twos during fast action (12 fps body, full-rate camera and effects): ?twos=1 or the T key.
+    this.actor.twos = new URLSearchParams(location.search).get('twos') === '1';
     this.ready = Promise.all([this.actor.ready, this.world.ready]).then(() => {
       this.loaded = true;
       this.hasCharacter = Boolean(CHARACTER.url);
@@ -172,7 +176,8 @@ export class TrainingScene {
     const effects = this.inspection || !this.hasCharacter ? 0 : this.effects;
     const showcase = !active || this.audio.mode === 'demo' || this.audio.fileName === 'Fimken — First Light.wav';
     if (animate) {
-      this.time += dt;
+      // The aura and particles freeze with a contact: a hit lands, the world holds, then everything resumes.
+      this.time += dt * (1 - .8 * (this.director.pose?.hitStop || 0));
       if (!this.isShowcase && this.audio.fileName === 'Fimken — First Light.wav' && this.audio.playbackStartedAt != null) {
         // The soundtrack is the clock, including after background tabs or a visual pause.
         this.director.time = Math.max(0, this.audio.context.currentTime - this.audio.playbackStartedAt - dt);
@@ -199,7 +204,7 @@ export class TrainingScene {
       this.actor.showcasePose=this.isShowcase ? this.director.pose : null;
       this.actor.update(dt, this.time, this.isShowcase?'idle':state, this.music);
       const contact=this.director.signals?.impact||this.director.signals?.landing;
-      if(contact){this.shake=.012*contact.strength*this.impactStrength;this.canvas.dataset.contacts=String(Number(this.canvas.dataset.contacts||0)+1);}
+      if(contact){this.punch=Math.max(this.punch||0,Math.min(1,contact.strength));this.shake=.012*contact.strength*this.impactStrength;this.canvas.dataset.contacts=String(Number(this.canvas.dataset.contacts||0)+1);}
       if(this.director.signals?.surge){this.shake=.014*this.impactStrength;}
       // Beats land as a small camera punch while the hero is powered up.
       if(this.music.beat && effects>0 && this.director.power>.4)this.shake=Math.max(this.shake,.004*this.music.beatStrength*this.impactStrength);
@@ -224,6 +229,9 @@ export class TrainingScene {
     this.controls.update();
     const position = this.camera.position.clone();
     if(this.reducedMotion)this.shake=0;
+    // Contact punch: the camera shoves toward the target and springs back over a few frames.
+    this.punch = (this.punch || 0) * Math.exp(-wallDt * 11);
+    if(animate && !this.inspection && !this.reducedMotion && this.punch > .01){ const toward = this.controls.target.clone().sub(this.camera.position).normalize(); this.camera.position.addScaledVector(toward, this.punch * .22 * this.impactStrength); }
     if(animate && this.isShowcase && !this.reducedMotion && effects>0 && this.director.state==='powerup')this.shake=Math.max(this.shake,.0016*this.director.power*this.impactStrength);
     if (animate && !this.inspection) { this.camera.position.x += Math.sin(this.time * 67) * this.shake; this.camera.position.y += Math.sin(this.time * 81) * this.shake * .5; }
     this.actor.anchor('chest',this.pipeline.heatWorld);

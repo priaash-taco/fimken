@@ -320,6 +320,7 @@ window.addEventListener('keydown', event => {
   if (event.code === 'Space') { event.preventDefault(); $('#motion').click(); }
   if (event.code === 'KeyF') { event.preventDefault(); $('#fullscreen').click(); }
   if (event.code === 'KeyP') { event.preventDefault(); scene?.performance.toggle(); }
+  if (event.code === 'KeyT') { event.preventDefault(); if (scene) scene.actor.twos = !scene.actor.twos; }
 });
 
 // Keep the production surface small. The existing diagnostics are available at
@@ -334,7 +335,7 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   for(const id of ['powerup','charge','blast'])dock.append(document.querySelector(`[data-practice="${id}"]`));
   const moves=document.createElement('select');moves.className='move-picker';moves.setAttribute('aria-label','Movement sequence');
   moves.add(new Option('More moves…',''));
-  for(const id of ['dash','strikes','heavy','flying','spin','flip','flight','hover','airborne','reaction','transformation','relaxedIdle','alert','stretch','neckRoll','wristWarmup','bounce','combatIdle','stepForward','stepBack','shuffle','vanish','frontKick','backKick','highKick','heavyKick','airCombo','hardLanding','threePoint','reset'])moves.add(new Option(SHOWCASE_MOVES[id].label,id));
+  for(const id of Object.keys(SHOWCASE_MOVES).filter(id=>!['sequence','stance','charge-pose','beam-pose','powerup','charge','blast'].includes(id)))moves.add(new Option(SHOWCASE_MOVES[id].label,id));
   moves.addEventListener('change',()=>{if(moves.value){scene?.practice(moves.value);moves.value='';}});dock.append(moves);
   dock.append($('#motion'),$('#fullscreen'));$('.universe').append(dock);
   // The dock was for review. The normal page shows the wordmark, a sound chip and settings;

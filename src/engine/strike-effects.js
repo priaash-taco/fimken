@@ -12,7 +12,7 @@ export class StrikeEffects {
       const mesh=new THREE.Mesh(geometry,new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
         uniforms:{strength:{value:0}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
         fragmentShader:shaderPalette+'varying vec2 vUv;uniform float strength;void main(){float edge=pow(max(0.,1.-abs(vUv.x*2.-1.)),1.5);gl_FragColor=vec4(p_kamehamehaBlue*2.0,edge*(1.-vUv.y)*strength*.48);}'
-      }));mesh.frustumCulled=false;this.root.add(mesh);return {role,mesh,history:[],width:i===2?.048:.026};
+      }));mesh.frustumCulled=false;this.root.add(mesh);return {role,mesh,history:[],width:i===2?.07:.042};
     });
     this.pulse=new THREE.Mesh(new THREE.RingGeometry(.07,.092,48),new THREE.MeshBasicMaterial({color:paletteColor('explosionYellow',2.4),transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));this.root.add(this.pulse);
   }
@@ -28,7 +28,7 @@ export class StrikeEffects {
       if(!paused){
         if(strength<.01){trail.history=[];}else{
           const position=actor.anchor(trail.role);if(trail.history[0]?.position.distanceTo(position)>.9)trail.history=[];
-          trail.history.unshift({position,time});trail.history=trail.history.filter(p=>time-p.time<.16).slice(0,24);
+          trail.history.unshift({position,time});trail.history=trail.history.filter(p=>time-p.time<.22).slice(0,24);
         }
       }
       trail.mesh.visible=trail.history.length>1 && strength>.01;trail.mesh.material.uniforms.strength.value=strength;

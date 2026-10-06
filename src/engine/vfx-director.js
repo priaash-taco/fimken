@@ -85,10 +85,10 @@ export class VFXDirector {
       void main(){float facing=min(1.,abs(dot(normalize(n),normalize(v))));float edge=pow(clamp(1.-facing,0.,1.),1.3);
       float flow=fbm(p*48.+vec3(time*1.2,-time*4.,time*.7));
       float curl=sin(p.y*160.-time*12.+flow*9.+p.x*70.);
-      float vein=pow(max(0.,1.-abs(curl)),12.);
+      float vein=pow(max(0.,1.-abs(curl)),7.);
       float core=pow(facing,9.)*(.72+flow*.28);
       vec3 color=mix(p_deepBeamBlue*1.6,p_kamehamehaBlue*1.6,smoothstep(.25,.7,flow));
-      color=mix(color,mix(p_deepBeamBlue,p_friezaPurple,.35)*1.7,edge);color+=pow(core,2.5)*p_spiritGlowWhite*2.2+vein*p_kamehamehaCyan*1.2;
+      color=mix(color,mix(p_deepBeamBlue,p_friezaPurple,.35)*1.7,edge);color+=pow(core,2.5)*p_spiritGlowWhite*2.4+vein*mix(p_kamehamehaCyan,p_spiritGlowWhite,.5)*2.4;
       gl_FragColor=vec4(color,strength*(.78+flow*.22));}`,
     })); scene.add(this.ball);
     this.corona=new THREE.Mesh(new THREE.SphereGeometry(.13,48,32),new THREE.ShaderMaterial({
@@ -112,7 +112,7 @@ export class VFXDirector {
       float fine=pow(max(0.,.5+.5*sin(vUv.x*220.+n*9.+vUv.y*30.-time*22.)),9.)+.6*pow(max(0.,.5+.5*sin(vUv.x*130.-n*6.+vUv.y*12.-time*15.)),7.);
       float ends=smoothstep(0.,.035,vUv.y)*(1.-smoothstep(.85,1.,vUv.y));
       vec3 color=mix(mix(p_friezaPurple,p_deepBeamBlue,.4)*1.6,p_deepBeamBlue*1.8,streak);color=mix(color,p_kamehamehaBlue*2.0,clamp(fine,0.,1.)*.6);
-      gl_FragColor=vec4(color,ends*(.35+streak*.55+fine*.25)*strength);}`,
+      gl_FragColor=vec4(color,ends*(.55+streak*.5+fine*.3)*strength);}`,
     });
     this.beam=new THREE.Mesh(new THREE.CylinderGeometry(.30,.18,1,48,32,true),beamMaterial);scene.add(this.beam);
     // A wider sheath of forked electricity crawling along the beam, in violet and cyan-white.
@@ -274,7 +274,7 @@ export class VFXDirector {
     for(const beam of [this.beam,this.core]){
       if(this.beam.visible)deformBeam(beam.geometry,time);
       beam.position.copy(this.ball.position).addScaledVector(forward,length/2);
-      beam.scale.set(radius,length,radius);beam.quaternion.setFromUnitVectors(up,forward);
+      const thick=beam===this.core?1.25:1;beam.scale.set(radius*thick,length,radius*thick);beam.quaternion.setFromUnitVectors(up,forward);
     }
     this.beam.material.uniforms.time.value=time;this.beam.material.uniforms.strength.value=effects*blast;
     this.core.material.uniforms.opacity.value=Math.min(1,effects*1.25)*blast;this.core.material.uniforms.time.value=time;

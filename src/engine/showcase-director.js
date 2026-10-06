@@ -94,12 +94,28 @@ function poseCurve(keys,i,time,k,j){
 }
 // A finished somersault is the same pose as none: never unwind it during the next blend.
 export const unwind=pose=>pose&&{...pose,flip:pose.flip-Math.round(pose.flip/(Math.PI*2))*Math.PI*2};
+// Anime timing: a move into a contact accelerates all the way (slow wind-up, hard snap, no easing
+// into the hit); a move out of a contact leaves fast and settles slowly. Everything else keeps the
+// smooth curves. Poses without contacts (calm moves) are untouched.
+const SNAP_IN=2.3,SETTLE_OUT=2.0;
 export function samplePose(keys,time) {
  let i=0;while(i<keys.length-2&&time>=keys[i+1].at)i++;
- const a=keys[i],b=keys[i+1],u=THREE.MathUtils.smoothstep(time,a.at,b.at),pose={};
+ const a=keys[i],b=keys[i+1],span=b.at-a.at,linear=span>0?THREE.MathUtils.clamp((time-a.at)/span,0,1):1,u=THREE.MathUtils.smoothstep(time,a.at,b.at),pose={};
+ const ha=a.pose.hitStop||0,hb=b.pose.hitStop||0,mode=span>.1&&hb>.5&&ha<.5?'in':span>.1&&ha>.5&&hb<.5?'out':null;
+ const eased=mode==='in'?Math.pow(linear,SNAP_IN):mode==='out'?1-Math.pow(1-linear,SETTLE_OUT):linear;
+ // Long free segments bulge sideways so hands travel on arcs, not straight lines.
+ const arc=!mode&&span>.45?Math.sin(Math.PI*linear):0;
  for(const k of Object.keys(a.pose)){
-  if(['power','charge','beam','hitStop','pivot','footControl','guard'].includes(k))pose[k]=THREE.MathUtils.lerp(a.pose[k],b.pose[k],u);
+  if(mode&&k!=='hitStop'&&!['beam','charge','power'].includes(k)){
+   pose[k]=Array.isArray(a.pose[k])?a.pose[k].map((v,j)=>THREE.MathUtils.lerp(v,b.pose[k][j],eased)):THREE.MathUtils.lerp(a.pose[k],b.pose[k],eased);
+  }
+  else if(['power','charge','beam','hitStop','pivot','footControl','guard'].includes(k))pose[k]=THREE.MathUtils.lerp(a.pose[k],b.pose[k],u);
   else pose[k]=Array.isArray(a.pose[k])?a.pose[k].map((v,j)=>poseCurve(keys,i,time,k,j)):poseCurve(keys,i,time,k);
+ }
+ if(arc>0)for(const [side,sign] of [['left',1],['right',-1]]){
+  if(!a.pose[side]||!b.pose[side])continue;
+  const from=a.pose[side],to=b.pose[side],travel=Math.hypot(to[0]-from[0],to[1]-from[1],to[2]-from[2]);
+  if(travel>.12){const bulge=Math.min(.07,travel*.2)*arc;pose[side]=[pose[side][0]+sign*bulge*.7,pose[side][1]+bulge*.45,pose[side][2]+bulge*.25];}
  }
  return pose;
 }
