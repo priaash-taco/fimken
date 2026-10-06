@@ -60,6 +60,52 @@ export class HeroRigControls {
     bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q));
     bone.updateWorldMatrix(false,true);
   }
+  solveLeg(side,foot,p){
+    const root=this.actor.root,sign=side==='left'?1:-1;
+    solveTwoBone(this.bones[side+'UpperLeg'],this.bones[side+'LowerLeg'],this.bones[side+'Foot'],root.localToWorld(foot.clone()),root.localToWorld(p[side+'Knee']?new THREE.Vector3(...p[side+'Knee']):new THREE.Vector3(sign*.30,.55,1)));
+    const footBone=this.bones[side+'Foot'];
+    footBone.quaternion.copy(footBone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(root.getWorldQuaternion(new THREE.Quaternion())).multiply(this.footRotations[side]));
+    if(p[side+'Ankle'])footBone.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p[side+'Ankle'])));
+    footBone.updateWorldMatrix(true,true);
+  }
+  // Pushes the hand and foot targets (root space) apart from each other and from the body.
+  separateLimbs(p,hands,feet){
+    const root=this.actor.root,at=name=>root.worldToLocal(this.bones[name].getWorldPosition(new THREE.Vector3()));
+    const seg=(a,b,r)=>({a:at(a),b:at(b),r});
+    const closest=(a0,a1,b0,b1)=>{const d1=a1.clone().sub(a0),d2=b1.clone().sub(b0),r=a0.clone().sub(b0);const A=Math.max(d1.dot(d1),1e-9),E=Math.max(d2.dot(d2),1e-9),F=d2.dot(r),B=d1.dot(d2),C=d1.dot(r),den=A*E-B*B;
+      let sN=den>1e-9?THREE.MathUtils.clamp((B*F-C*E)/den,0,1):0;let tN=THREE.MathUtils.clamp((B*sN+F)/E,0,1);sN=THREE.MathUtils.clamp((B*tN-C)/A,0,1);return [a0.clone().addScaledVector(d1,sN),b0.clone().addScaledVector(d2,tN)];};
+    const strikeL=(p.trails?.[0]||0)>.5,strikeR=(p.trails?.[1]||0)>.5,kick=(p.trails?.[2]||0)>.5;
+    const shape={left:this.fitHand('left'),right:this.fitHand('right')};
+    const torso=seg('hips','neck',.19),head={c:at('head').add(new THREE.Vector3(0,.09,0)),r:.12};
+    const limb={};
+    for(const side of ['left','right']){limb[side]={forearm:seg(side+'LowerArm',side+'Hand',.05),upperArm:seg(side+'UpperArm',side+'LowerArm',.06),thigh:seg(side+'UpperLeg',side+'LowerLeg',.09),shin:seg(side+'LowerLeg',side+'Foot',.07),hand:{c:hands[side].clone().add(shape[side].offset),r:shape[side].radius}};}
+    // Push `target` so the segment or sphere `mine` clears `other` by their radii.
+    const clear=(target,mine,other,weight=1)=>{if(weight<=0)return;let pa,pb;
+      if(mine.c)pa=mine.c.clone();else pa=null;
+      if(mine.c&&other.c){pa=mine.c.clone();pb=other.c.clone();}
+      else if(mine.c){[pb,pa]=closest(other.a,other.b,mine.c,mine.c);}
+      else if(other.c){[pa,pb]=closest(mine.a,mine.b,other.c,other.c);}
+      else [pa,pb]=closest(mine.a,mine.b,other.a,other.b);
+      const gap=pa.clone().sub(pb),minimum=mine.r+other.r;if(gap.length()>=minimum)return;
+      if(gap.lengthSq()<1e-8)gap.set(0,0,1);const deficit=minimum-gap.length();gap.normalize();target.addScaledVector(gap,deficit*weight);
+      if(this.debugSeparate)this.debugSeparate.push({mine:mine.c?'sphere':'seg',other:other.c?'sphere':'seg',pa:pa.toArray().map(x=>+x.toFixed(2)),pb:pb.toArray().map(x=>+x.toFixed(2)),deficit:+deficit.toFixed(3),weight});};
+    const rebuild=()=>{for(const side of ['left','right'])limb[side].hand.c=hands[side].clone().add(shape[side].offset);};
+    for(let pass=0;pass<2;pass++){
+      for(const side of ['left','right']){const other=side==='left'?'right':'left',L=limb[side],O=limb[other];
+        const keepHand=(side==='left'?strikeL:strikeR)&&!(side==='left'?strikeR:strikeL),handW=keepHand?0:(side==='left'?strikeL:strikeR)===(side==='left'?strikeR:strikeL)?.5:1;
+        // Hands and forearms: off the torso, the head, the thighs, and the other arm.
+        clear(hands[side],L.hand,torso,handW||1);clear(hands[side],L.forearm,torso,handW||1);
+        clear(hands[side],L.hand,head,handW||1);clear(hands[side],L.forearm,head,handW||1);
+        for(const leg of ['left','right']){clear(hands[side],L.hand,limb[leg].thigh,handW||1);clear(hands[side],L.forearm,limb[leg].thigh,handW||1);}
+        clear(hands[side],L.hand,O.hand,handW);clear(hands[side],L.hand,O.forearm,handW);clear(hands[side],L.forearm,O.forearm,handW);clear(hands[side],L.forearm,O.upperArm,handW);
+        rebuild();
+        // Legs: the free (lifted) leg gives way to the planted one; a kicking foot keeps its mark.
+        const lifted=(p[side+'Foot']?.[1]||0)>(p[other+'Foot']?.[1]||0),footW=kick&&lifted?0:lifted?1:.3;
+        clear(feet[side],L.shin,O.shin,footW);clear(feet[side],L.shin,O.thigh,footW);clear(feet[side],L.thigh,O.thigh,footW*.5);
+        clear(feet[side],{c:feet[side].clone(),r:.08},{c:feet[other].clone(),r:.08},footW);
+      }
+    }
+  }
   // Arm IK, wrist aim within a human bend, and the fist curl, for one hand target in root space.
   solveArm(side,hand,p){
     const root=this.actor.root,sign=side==='left'?1:-1;
@@ -131,32 +177,16 @@ export class HeroRigControls {
     // the body; the life layer's lag and wobble can briefly push them over, so a keep-out
     // follows: solve the arms once, fit a sphere to each hand's wrist and fingertips as posed,
     // push the spheres apart and out of the torso, then solve again. Same input, same output.
-    const hands={};
-    for(const side of ['left','right']){const sign=side==='left'?1:-1;const hand=new THREE.Vector3(...p[side]);hand.y+=breathing+tremor+Math.sin(time*1.9+sign*.65)*.008*idle;hand.z+=Math.sin(time*1.65+sign)*.008*idle;hands[side]=hand;}
-    for(const side of ['left','right']){
-      const sign=side==='left'?1:-1;
+    const hands={},feet={};
+    for(const side of ['left','right']){const sign=side==='left'?1:-1;const hand=new THREE.Vector3(...p[side]);hand.y+=breathing+tremor+Math.sin(time*1.9+sign*.65)*.008*idle;hand.z+=Math.sin(time*1.65+sign)*.008*idle;hands[side]=hand;
       const foot=this.feet[side].clone();if(!p.footControl){foot.y+=(side==='left'?.09:.015)*hoverWeight;foot.z+=(side==='left'?.10:-.07)*hoverWeight;}
-      if(p[side+'Foot'])foot.add(new THREE.Vector3(...p[side+'Foot']));
-      solveTwoBone(this.bones[side+'UpperLeg'],this.bones[side+'LowerLeg'],this.bones[side+'Foot'],root.localToWorld(foot),root.localToWorld(p[side+'Knee']?new THREE.Vector3(...p[side+'Knee']):new THREE.Vector3(sign*.30,.55,1)));
-      const footBone=this.bones[side+'Foot'];
-      footBone.quaternion.copy(footBone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(root.getWorldQuaternion(new THREE.Quaternion())).multiply(this.footRotations[side]));
-      if(p[side+'Ankle'])footBone.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p[side+'Ankle'])));
-    }
-    const shape={};
-    for(const side of ['left','right']){this.solveArm(side,hands[side],p);shape[side]=this.fitHand(side);}
-    const centre=side=>hands[side].clone().add(shape[side].offset);
-    {const cL=centre('left'),cR=centre('right'),gap=cL.clone().sub(cR),minimum=shape.left.radius+shape.right.radius+.01;
-      if(gap.length()<minimum){const push=minimum-gap.length();if(gap.lengthSq()<1e-8)gap.set(1,0,0);gap.normalize();
-        // A striking hand (its trail lit) keeps its mark; the other gives way.
-        const strikeL=(p.trails?.[0]||0)>.5,strikeR=(p.trails?.[1]||0)>.5,wL=strikeL&&!strikeR?0:strikeR&&!strikeL?1:.5;
-        hands.left.addScaledVector(gap,push*wL);hands.right.addScaledVector(gap,-push*(1-wL));}}
-    const hipsW=this.bones.hips.getWorldPosition(new THREE.Vector3()),neckW=(this.bones.neck||this.bones.chest).getWorldPosition(new THREE.Vector3()),axis=neckW.clone().sub(hipsW),axisLength=axis.length();axis.normalize();
-    for(const side of ['left','right']){
-      const world=root.localToWorld(centre(side)),along=THREE.MathUtils.clamp(world.clone().sub(hipsW).dot(axis),-.08,axisLength+.1);
-      const closest=hipsW.clone().addScaledVector(axis,along),radial=world.clone().sub(closest),radius=.13+shape[side].radius*.8;
-      if(radial.length()<radius){if(radial.lengthSq()<1e-8)radial.set(0,0,1).applyQuaternion(root.quaternion);const push=root.worldToLocal(closest.clone().addScaledVector(radial.normalize(),radius)).sub(root.worldToLocal(world.clone()));hands[side].add(push);}
-    }
-    for(const side of ['left','right'])this.solveArm(side,hands[side],p);
+      if(p[side+'Foot'])foot.add(new THREE.Vector3(...p[side+'Foot']));feet[side]=foot;}
+    // Self-collision: solve every limb once, build capsules from the posed bones, push the
+    // hand and foot targets until no limb overlaps another or the body, then solve again.
+    // Stateless, so the same pose always gives the same result.
+    for(const side of ['left','right']){this.solveLeg(side,feet[side],p,hoverWeight);this.solveArm(side,hands[side],p);}
+    this.separateLimbs(p,hands,feet);
+    for(const side of ['left','right']){this.solveLeg(side,feet[side],p,hoverWeight);this.solveArm(side,hands[side],p);}
     root.updateMatrixWorld(true);
     this.center.copy(this.bones.leftHand.getWorldPosition(new THREE.Vector3())).add(this.bones.rightHand.getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);
     // Aimed slightly down, so the beam meets the ground in the distance.
