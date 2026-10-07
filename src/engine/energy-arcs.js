@@ -5,8 +5,8 @@ import * as THREE from 'three';
 // core and a blue halo. Arcs live a fraction of a second, then re-roll, so they flicker and jump.
 const MAX_SEGMENTS = 34;
 export class EnergyArcs {
-  constructor(scene, count = 11) {
-    this.count = count; this.arcs = Array.from({ length: count }, () => ({ segments: [], born: -9, life: 0, fade: 1, tint: 0 }));
+  constructor(scene, count = 11, { spread = 1 } = {}) {
+    this.count = count; this.spread = spread; this.arcs = Array.from({ length: count }, () => ({ segments: [], born: -9, life: 0, fade: 1, tint: 0 }));
     const quads = count * MAX_SEGMENTS;
     this.positions = new Float32Array(quads * 12); this.uv = new Float32Array(quads * 8); this.fade = new Float32Array(quads * 4); this.tint = new Float32Array(quads * 4);
     const index = []; for (let q = 0; q < quads; q++) { const v = q * 4; index.push(v, v + 1, v + 2, v + 1, v + 3, v + 2); for (let k = 0; k < 4; k++) this.uv.set([k % 2, k < 2 ? 0 : 1], (v + k) * 2); }
@@ -40,7 +40,7 @@ export class EnergyArcs {
     return points;
   }
   roll(arc, centre, reach) {
-    const start = centre.clone().addScaledVector(this.randomDirection(.8), .35 + this.random() * .6), end = centre.clone().addScaledVector(this.randomDirection(.55), reach * (.55 + this.random() * .6));
+    const start = centre.clone().addScaledVector(this.randomDirection(.8), (.35 + this.random() * .6) * this.spread), end = centre.clone().addScaledVector(this.randomDirection(.55), reach * (.55 + this.random() * .6));
     const main = this.path(start, end, 4, reach * .22), segments = [];
     for (let i = 0; i < main.length - 1; i++) segments.push([main[i], main[i + 1], 1]);
     for (let b = 0; b < 2; b++) {

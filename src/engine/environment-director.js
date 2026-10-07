@@ -118,7 +118,8 @@ export class EnvironmentDirector {
   setMood(mood, effects, wind = { x: 0, z: 0 }) {
     this.windDrift ??= { x: 0, z: 0 }; this.windDrift.x = THREE.MathUtils.damp(this.windDrift.x, wind.x * 14, 1.5, 1 / 60); this.windDrift.z = THREE.MathUtils.damp(this.windDrift.z, wind.z * 14, 1.5, 1 / 60);
     const lift = mood.dustLift * effects, l = mood.levels;
-    this.dust.material.opacity = .35 + lift * .4; this.dust.material.size = .018 + lift * .02;
+    this.dust.material.opacity = .35 + lift * .4 + mood.intensity * .25; this.dust.material.size = .018 + lift * .02 + mood.intensity * .014;
+    this.dust.material.color.set(PALETTE.goldenHighlight).lerp((this.energyTint ??= new THREE.Color()).copy(ENERGY_LIGHT.color.value).multiplyScalar(1.4 / Math.max(ENERGY_LIGHT.color.value.r, ENERGY_LIGHT.color.value.g, ENERGY_LIGHT.color.value.b, .001)), Math.min(1, mood.intensity * effects));
     this.dustLift = THREE.MathUtils.damp(this.dustLift || 0, lift * .9, 2, 1 / 60);
     // Dark brown at rest; under blue energy the ground goes cool blue-grey, like the reference.
     const blue = THREE.MathUtils.clamp(l.charge + l.release * .9, 0, 1) * effects;

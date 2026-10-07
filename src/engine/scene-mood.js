@@ -26,6 +26,7 @@ export class SceneMood {
     return this;
   }
   // Convenience numbers the rest of the scene reads.
+  get intensity(){const l=this.levels;return Math.max(l.powerUp*.6,l.charge*.8,l.release,l.impact*.8);}
   get darken(){const l=this.levels;return l.charge*.22+l.release*.34+l.impact*.12;}
   get contrast(){const l=this.levels;return 1+l.powerUp*.1+l.charge*.08+l.release*.3+l.impact*.14;}
   get dustLift(){const l=this.levels;return l.powerUp*.7+l.charge*.35+l.release*.5+l.impact;}
