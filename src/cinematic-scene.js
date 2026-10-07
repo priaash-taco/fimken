@@ -5,6 +5,7 @@ import { characterTextures, inspectRendering } from './engine/render-diagnostics
 import { CHARACTER } from './engine/assets.js';
 import { CharacterController } from './engine/character-controller.js';
 import { AudioAnalyzer, MusicState } from './engine/music-state.js';
+import { SoundPillars } from './engine/sound-pillars.js';
 import { FreestyleDirector } from './engine/freestyle-director.js';
 import { SceneDirector } from './engine/scene-director.js';
 import { CinematicDirector } from './engine/cinematic-director.js';
@@ -45,7 +46,7 @@ export class TrainingScene {
     this.actor = new CharacterController(CHARACTER);
     this.actor.gazeTarget = this.camera;
     this.scene.add(this.actor.root);
-    this.vfx = new VFXDirector(this.scene);
+    this.vfx = new VFXDirector(this.scene);this.pillars = new SoundPillars(this.scene, this.vfx.noise);
     this.mood = new SceneMood(); this.marks = new GroundMarks(this.scene);
     this.moveIds = () => Object.keys(SHOWCASE_MOVES).filter(id => !['sequence', 'stance', 'charge-pose', 'beam-pose'].includes(id));
     // Poses on twos during fast action (12 fps body, full-rate camera and effects): ?twos=1 or the T key.
@@ -171,7 +172,8 @@ export class TrainingScene {
     // Authored poses follow wall time even below 20 fps; physics keeps its small step.
     const dt = Math.min(this.isShowcase ? .25 : .05, wallDt)*this.playbackSpeed;
     const active = this.audio.mode !== 'idle';
-    this.music.update(Math.min(.05,wallDt), this.analyzer.analyse(this.audio.spectrum(), this.audio.context?.sampleRate || 44100, this.sensitivity), active);
+    const bins = this.audio.spectrum();
+    this.music.update(Math.min(.05,wallDt), this.analyzer.analyse(bins, this.audio.context?.sampleRate || 44100, this.sensitivity), active);
     const animate = !this.paused && this.loaded && this.hasCharacter;
     const effects = this.inspection || !this.hasCharacter ? 0 : this.effects;
     const showcase = !active || this.audio.mode === 'demo' || this.audio.fileName === 'Fimken — First Light.wav';
@@ -226,6 +228,7 @@ export class TrainingScene {
       e.strength.value = (l.powerUp * 1.1 + l.recovery * .25 + l.charge * 1.7 + l.release * 2.6 + l.impact * .55) * effects; }
     this.lighting.update(this.actor.root.position, this.director.power, effects, this.actor, this.director.signals);
     if (this.loaded) this.vfx.update(animate ? dt : 0, this.time, this.actor, this.director, this.music, effects, !animate);
+    this.pillars.update(Math.min(.05,wallDt), this.time, active ? bins : null, this.audio.context?.sampleRate || 44100, effects, this.music);
     this.controls.update();
     const position = this.camera.position.clone();
     if(this.reducedMotion)this.shake=0;
