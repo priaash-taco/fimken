@@ -83,3 +83,10 @@ bass hit -> heavy punch; crescendo -> charge and beam; drop -> dash; held tone -
 58. Training exhaustion: torso leans forward, hands on thighs, bigger breathing, head hangs, straighten gradually, roll shoulders, back to stance.
 59. Calm post-fight: arms relax, feet narrow, breathing slows, look at defeated opponent, head lifts, relaxed posture, back to neutral.
 60. Full showcase sequence: 0-5 relaxed idle; 5-10 stretches; 10-18 stance and footwork; 18-25 jab-cross-hook-uppercut; 25-32 kicks; 32-38 defence; 38-44 dash/vanish; 44-50 flying/hover; 50-58 aerial combo; 58-65 heavy punch and knockback; 65-72 power-up; 72-80 charge; 80-84 beam; 84-90 hover recovery; 90-95 hero stance.
+
+## Rock and ground destruction (added from Goku's training and fight scenes)
+61. Boulder punch: a boulder pushes up out of the ground, feet widen, right fist loads by the ribs, hold, one straight punch drives through it, overshoot through the rubble. [built: boulderPunch]
+62. Boulder kick: plant the support foot, chamber the knee, straight kick through the stone, fast retract. [built: boulderKick]
+63. Ground pound: crouch, spring up, fists together overhead, drive both fists into the floor so rubble bursts up around him, rise out of the crater. [built: groundPound]
+64. Rock throw: squat, take the boulder in both hands, heave overhead, lean back, hurl it; it shatters where it lands. [built: rockThrow]
+65. Dive punch: rise above a boulder, fist drawn back, plunge fist first, shatter it from above, rise from the crater. [built: divePunch]

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { CosmicWorld } from './cosmic-world.js';
 import { rockGeometry } from './rock-geometry.js';
 // The same banded diffuse the hero uses, so rocks and ground sit in the same drawing.
-const celBands = material => { const before = material.onBeforeCompile; material.onBeforeCompile = shader => { before?.call(material, shader);
+export const celBands = material => { const before = material.onBeforeCompile; material.onBeforeCompile = shader => { before?.call(material, shader);
   shader.uniforms.energyPos = ENERGY_LIGHT.position; shader.uniforms.energyColor = ENERGY_LIGHT.color; shader.uniforms.energyStrength = ENERGY_LIGHT.strength;
   shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 energyPos;uniform vec3 energyColor;uniform float energyStrength;');
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>

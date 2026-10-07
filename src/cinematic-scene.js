@@ -6,6 +6,7 @@ import { CHARACTER } from './engine/assets.js';
 import { CharacterController } from './engine/character-controller.js';
 import { AudioAnalyzer, MusicState } from './engine/music-state.js';
 import { SoundPillars } from './engine/sound-pillars.js';
+import { RockSmash } from './engine/rock-smash.js';
 import { FreestyleDirector } from './engine/freestyle-director.js';
 import { SceneDirector } from './engine/scene-director.js';
 import { CinematicDirector } from './engine/cinematic-director.js';
@@ -46,7 +47,7 @@ export class TrainingScene {
     this.actor = new CharacterController(CHARACTER);
     this.actor.gazeTarget = this.camera;
     this.scene.add(this.actor.root);
-    this.vfx = new VFXDirector(this.scene);this.pillars = new SoundPillars(this.scene, this.vfx.noise);
+    this.vfx = new VFXDirector(this.scene);this.pillars = new SoundPillars(this.scene, this.vfx.noise);this.rocks = new RockSmash(this.scene, this.vfx.noise);
     this.mood = new SceneMood(); this.marks = new GroundMarks(this.scene);
     this.moveIds = () => Object.keys(SHOWCASE_MOVES).filter(id => !['sequence', 'stance', 'charge-pose', 'beam-pose'].includes(id));
     // Poses on twos during fast action (12 fps body, full-rate camera and effects): ?twos=1 or the T key.
@@ -138,7 +139,7 @@ export class TrainingScene {
   }
   resetTraining() {
     this.actor.life?.reset();
-    this.physics.reset(); this.director.reset(); this.vfx.reset(); this.music.reset();
+    this.physics.reset(); this.director.reset(); this.vfx.reset(); this.rocks.reset(); this.music.reset();
     this.time = 0; this.shake = 0; this.lastRevision = -1;
     this.actor.root.position.set(0, 0, 0); this.actor.root.rotation.set(0, CHARACTER.facing, 0);
     if(this.isShowcase)this.actor.showcasePose=this.director.pose;
@@ -217,6 +218,7 @@ export class TrainingScene {
     }
     // Scene state drives lighting, sky, fog, grading, dust and ground marks together.
     if (animate) this.mood.update(dt, this.director, this.music, this.actor.root.position, this.vfx.impactPoint);
+    if (this.hasCharacter) { this.rocks.update(animate ? dt : 0, this.actor, this.director, this.camera); const hit = this.rocks.shattered; if (hit) { this.rocks.shattered = null; this.mood.impactAge = 0; this.mood.impactStrength = hit.strength; this.mood.impactPoint.copy(hit.point); this.mood.shockAge = 0; this.mood.shockPoint.copy(hit.point); } }
     this.pipeline.shockR = this.mood.shockAge * 1.15; this.pipeline.shockS = Math.max(0, 1 - this.mood.shockAge / .85) * effects * (this.reducedMotion ? 0 : 1);
     this.lighting.setMood(this.mood, effects); this.world.setMood(this.mood, effects, this.vfx.motion.wind); this.marks.update(this.mood, effects, this.time);
     this.world.cosmos.air.contrast.value = 1 + (this.mood.levels.powerUp * .25 + this.mood.levels.release * .4) * effects; this.world.cosmos.air.darken.value = (this.mood.levels.charge * .3 + this.mood.levels.release * .4) * effects;

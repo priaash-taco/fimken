@@ -206,3 +206,9 @@ Read this section as overriding anything earlier that it contradicts.
 - Aura, beam and orb are now soft noise fields on invisible camera-facing carriers (noise-texture.js, energy-flame.js with 4 layers, plasma-beam.js, plasma-ball.js). Old meshes stay as invisible carriers (colorWrite=false) so beam radius and positions still work.
 - Ray fans and arcs are secondary and faint. Do not add effects; tune these three first.
 - Judge by: no visible carrier edge, uncountable rays, aura with no fixed outline. Capture with scripts/capture-live.mjs.
+
+## Rock-smashing moves
+- New moves: boulderPunch, boulderKick, groundPound, rockThrow, divePunch (src/engine/smash-moves.js, bible entries 61-65). They are in freestyle tiers 3-4.
+- Moves drive the boulder prop with `rock` cues (spawn, grab, throw, smash, ground). src/engine/rock-smash.js owns the boulder, rubble chunks and dust, and reports each shatter so the scene marks a crater and shock ring there.
+- rockThrow arcs across the camera's view and uses the wide shot, because the default camera is only about 4 m from the hero.
+- scripts/capture-sound.mjs captures stills with the demo rhythm running.

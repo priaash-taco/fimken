@@ -1,5 +1,6 @@
 // Timed, editable body choreography. Coordinates are metres in hero-root space;
 // joint angles are radians. IK, follow-through, cue dispatch and VFX remain separate.
+import { createSmashMoves } from './smash-moves.js';
 export function createStagedMoves({stance,guard,pivot,chamber,kick}) {
  const pose=(base,changes={})=>({...base,...changes});
  // Keys without a phase are grounded guard work, or floating once the pose lifts off.
@@ -103,6 +104,7 @@ export function createStagedMoves({stance,guard,pivot,chamber,kick}) {
  };
  return {
   ...extra,
+  ...createSmashMoves({K,move,poses:{guard,air,heavyLoad,heavyHit,loaded}}),
   powerup:move('Power-up',[
    K(0,stance,{},'powerup','Begin planted','powerBuild'),K(.5,loaded,{power:.30},'powerup','Widen feet, bend knees, draw hands to hips','powerBuild'),
    K(1.5,loaded,{lean:-.025,headPitch:.26,power:.6,tension:1},'powerup','Retract elbows, lift chest, lower head','powerPeak'),
