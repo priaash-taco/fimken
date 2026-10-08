@@ -109,8 +109,23 @@ export class HeroRigControls {
   // Arm IK, wrist aim within a human bend, and the fist curl, for one hand target in root space.
   solveArm(side,hand,p){
     const root=this.actor.root,sign=side==='left'?1:-1;
-    const pole=root.localToWorld(new THREE.Vector3(...(p[side+'Elbow']||[sign*.85,1.02,.45])));
-    solveTwoBone(this.bones[side+'UpperArm'],this.bones[side+'LowerArm'],this.bones[side+'Hand'],root.localToWorld(hand.clone()),pole);
+    const poleLocal=new THREE.Vector3(...(p[side+'Elbow']||[sign*.85,1.02,.45]));
+    // The elbow must stay outside the torso. Solve, check the elbow against the spine capsule, and if it
+    // is inside swing the elbow direction outward and solve again. Poses that put the elbow target
+    // across the chest used to drive the elbow through the body.
+    const local=name=>root.worldToLocal(this.bones[name].getWorldPosition(new THREE.Vector3()));
+    const hip=local('hips'),spine=local('neck').sub(hip),spineLength2=Math.max(spine.lengthSq(),1e-9);
+    // A hand reaching across the chest at full stretch makes the arm a straight line through the body, and
+    // no elbow swing can fix that. In that case the hand target also comes forward and around the chest.
+    const reach=hand.clone();
+    for(let i=0;i<6;i++){
+      solveTwoBone(this.bones[side+'UpperArm'],this.bones[side+'LowerArm'],this.bones[side+'Hand'],root.localToWorld(reach.clone()),root.localToWorld(poleLocal.clone()));
+      const elbow=local(side+'LowerArm'),t=THREE.MathUtils.clamp(elbow.clone().sub(hip).dot(spine)/spineLength2,0,1),out=elbow.clone().sub(hip.clone().addScaledVector(spine,t));
+      const need=.19+.05+.025-out.length();if(need<=0)break;
+      if(out.lengthSq()<1e-6)out.set(sign,0,.2);out.normalize();if(out.x*sign<.3){out.x=sign*.7;out.normalize();}
+      poleLocal.addScaledVector(out,need*2+.12);
+      if(i>=1){const forward=out.clone();forward.z=Math.max(forward.z,.6);forward.normalize();reach.addScaledVector(forward,need*.8);}
+    }
     // Orient the existing hand geometry toward the energy centre; fingers only curl as a group.
     const wrist=this.bones[side+'Hand'];
     const direction=new THREE.Vector3(sign*.25,-1,.1).normalize();

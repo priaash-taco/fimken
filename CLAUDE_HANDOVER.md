@@ -212,3 +212,8 @@ Read this section as overriding anything earlier that it contradicts.
 - Moves drive the boulder prop with `rock` cues (spawn, grab, throw, smash, ground). src/engine/rock-smash.js owns the boulder, rubble chunks and dust, and reports each shatter so the scene marks a crater and shock ring there.
 - rockThrow arcs across the camera's view and uses the wide shot, because the default camera is only about 4 m from the hero.
 - scripts/capture-sound.mjs captures stills with the demo rhythm running.
+
+## Signature moves and elbow keep-out
+- New moves: spiritBomb, dragonFist, kaioken (src/engine/signature-moves.js, bible 66-68). Effects come from `fx` cues handled by src/engine/signature-fx.js. The Dragon Fist uses PlasmaBeam with `tint` and `wave`; the Kaio-ken sets `hue` on the shared aura (EnergyFlame).
+- Arm IK now keeps the elbow out of the torso (solveArm in hero-rig-controls.js): it swings the elbow direction outward and, if the arm is a straight line through the chest, brings the hand target forward around it. Before this, elbows went through the body in energyThrow, stretch, airCombo, dash and flurry.
+- scripts/check-penetration.mjs measures real penetration of hand, forearm and elbow against the spine on the final skeleton. Ignore the upper-arm column (the shoulder sits next to the spine). Remaining cases are the deliberate cross-chest stretch and the two-handed energy throw wind-up.

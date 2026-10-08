@@ -90,3 +90,6 @@ bass hit -> heavy punch; crescendo -> charge and beam; drop -> dash; held tone -
 63. Ground pound: crouch, spring up, fists together overhead, drive both fists into the floor so rubble bursts up around him, rise out of the crater. [built: groundPound]
 64. Rock throw: squat, take the boulder in both hands, heave overhead, lean back, hurl it; it shatters where it lands. [built: rockThrow]
 65. Dive punch: rise above a boulder, fist drawn back, plunge fist first, shatter it from above, rise from the crater. [built: divePunch]
+66. Spirit Bomb: open both hands to the sky, raise both arms, hold while a huge orb grows overhead and energy streams in from far away, the whole body straining; hurl it down so it bursts on the ground. [built: spiritBomb]
+67. Dragon Fist: coil low with the fist at the hip, hold the load, rising uppercut that sends a golden serpentine dragon of energy into the sky. [built: dragonFist]
+68. Kaio-ken: bear down, gather it in, the aura flares crimson with a shout, then a rush of dashing punches before the aura fades. [built: kaioken]
