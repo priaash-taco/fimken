@@ -1,3 +1,4 @@
+import { lensFxGlsl, lensFxUniforms } from './lens.js';
 import { shaderPalette } from './palette.js';
 import * as THREE from 'three';
 // A ball of plasma without a visible sphere: a camera-facing carrier whose radial field is
@@ -6,10 +7,10 @@ import * as THREE from 'three';
 // Used for the charge orb, the flash at the hands on release, and the glow where a beam lands.
 export class PlasmaBall {
   constructor(scene, noise, { tint = 0 } = {}) {
-    this.uniforms = { noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, size: { value: 1 }, wobble: { value: .35 }, rings: { value: 1 }, tint: { value: tint } };
+    this.uniforms = { ...lensFxUniforms(), noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, size: { value: 1 }, wobble: { value: .35 }, rings: { value: 1 }, tint: { value: tint } };
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms: this.uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       vertexShader: `uniform float size;varying vec2 vP;void main(){vP=position.xy;vec4 c=modelViewMatrix*vec4(0.,0.,0.,1.);gl_Position=projectionMatrix*(c+vec4(position.xy*size,0.,0.));}`,
-      fragmentShader: shaderPalette + `uniform sampler2D noiseTex;uniform float time,strength,wobble,rings,tint;varying vec2 vP;
+      fragmentShader: shaderPalette + lensFxGlsl + `uniform sampler2D noiseTex;uniform float time,strength,wobble,rings,tint;varying vec2 vP;
         void main(){
          float r=length(vP);float a=atan(vP.y,vP.x);vec2 c=vec2(cos(a),sin(a));
          // Irregular perimeter: the radius is pushed in and out by noise sampled around the circle.
@@ -27,7 +28,7 @@ export class PlasmaBall {
          vec3 haloColor=mix(p_deepBeamBlue,p_deepGiOrange,tint);
          vec3 bodyColor=mix(mix(p_kamehamehaBlue,p_kamehamehaCyan,swirl),p_sunsetOrangeHighlight,tint);
          vec3 color=haloColor*halo*1.5+bodyColor*body*2.2+p_spiritGlowWhite*pow(core,1.4)*3.6+p_spiritGlowWhite*(steady*.9+pulse*.7);
-         gl_FragColor=vec4(color*strength,1.);}` }));
+         gl_FragColor=vec4(lensFx(color)*lensBeam*strength,1.);}` }));
     this.mesh.frustumCulled = false; this.mesh.visible = false; this.mesh.renderOrder = 7; scene.add(this.mesh);
   }
   // radius is the body's world radius; the carrier is larger so the halo has room.

@@ -1,15 +1,16 @@
 import { PALETTE } from './palette.js';
+import { HERO_LENS, heroLensGlsl, heroLensFragment } from './lens.js';
 import * as THREE from 'three';
 // Keep authored 4K albedo/normal maps. Band direct diffuse lighting gently, retaining
 // shadow maps and point-light response; a skinned inverted hull draws the silhouette.
 export class HeroFinish {
   constructor(model){
-    this.enabled={value:0};this.width={value:.0022};this.outlines=[];this.glow={value:0};this.glowHulls=[];
+    this.enabled={value:0};this.width={value:.0022};this.inkScale={value:1};this.lensInkOn=true;this.outlines=[];this.glow={value:0};this.glowHulls=[];
     // Hair sway: the asset has no hair bones, so hair-only vertices (spikes, back of the head) are
     // offset in the vertex shader by a spring that lags the head's motion. Face vertices never move.
     this.sway={value:new THREE.Vector3()};this.model=model;this.headPrev=new THREE.Vector3();this.swayState={x:new THREE.Vector3(),v:new THREE.Vector3()};this.swayStarted=false;
     const meshes=[];model.traverse(o=>{if(o.isSkinnedMesh)meshes.push(o);});
-    const addSway=shader=>{shader.uniforms.hairSway=this.sway;shader.vertexShader='uniform vec3 hairSway;\nattribute float sway;\n'+shader.vertexShader.replace('#include <skinning_vertex>','#include <skinning_vertex>\n transformed += hairSway * sway;');};
+    const addSway=shader=>{shader.uniforms.hairSway=this.sway;shader.vertexShader='uniform vec3 hairSway;\nattribute float sway;\nvarying float vSway;\n'+shader.vertexShader.replace('#include <skinning_vertex>','#include <skinning_vertex>\n transformed += hairSway * sway; vSway = sway;');};
     for(const mesh of meshes){
       const geometry=mesh.geometry;
       if(!geometry.attributes.sway){
@@ -29,18 +30,19 @@ export class HeroFinish {
       for(const material of [mesh.material].flat()){
         const before=material.onBeforeCompile;
         material.onBeforeCompile=shader=>{
-          before.call(material,shader);shader.uniforms.heroCel=this.enabled;addSway(shader);
-          shader.fragmentShader='uniform float heroCel;\n'+shader.fragmentShader;
+          before.call(material,shader);shader.uniforms.heroCel=this.enabled;Object.assign(shader.uniforms,HERO_LENS);addSway(shader);
+          shader.fragmentShader='uniform float heroCel;\n'+heroLensGlsl+shader.fragmentShader;
+          if(shader.fragmentShader.includes('diffuseColor'))shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float lensLum = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lensLum) * lensTintH, lensDesat * (1.0 - lensFlood)); diffuseColor.rgb *= mix(lensAlbedo, 1.0, lensFlood);');
           shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',`#include <lights_fragment_end>
           float heroL = max(.0001, dot(reflectedLight.directDiffuse, vec3(.2126,.7152,.0722)));
           float heroBand = mix(.26, .60, smoothstep(.27,.32,heroL));
           heroBand = mix(heroBand, 1.0, smoothstep(.67,.74,heroL));
-          reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel);`);
+          reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel*lensCel);`+heroLensFragment);
         };
-        material.customProgramCacheKey=()=> 'fimken-hero-cel-v3';material.needsUpdate=true;
+        material.customProgramCacheKey=()=> 'fimken-hero-lens-v2';material.needsUpdate=true;
       }
       const ink=new THREE.MeshStandardMaterial({color:PALETTE.animeBlack,emissive:'#08060d',side:THREE.BackSide,roughness:1});
-      ink.onBeforeCompile=shader=>{shader.uniforms.inkWidth=this.width;addSway(shader);shader.vertexShader='uniform float inkWidth;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','transformed += normalize(objectNormal) * inkWidth;\n#include <project_vertex>');};
+      ink.onBeforeCompile=shader=>{shader.uniforms.inkWidth=this.width;shader.uniforms.inkScale=this.inkScale;addSway(shader);shader.vertexShader='uniform float inkWidth;uniform float inkScale;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','transformed += normalize(objectNormal) * inkWidth * inkScale;\n#include <project_vertex>');};
       const outline=new THREE.SkinnedMesh(mesh.geometry,ink);outline.name='Hero silhouette ink';
       outline.position.copy(mesh.position);outline.quaternion.copy(mesh.quaternion);outline.scale.copy(mesh.scale);
       outline.bind(mesh.skeleton,mesh.bindMatrix);outline.frustumCulled=false;outline.visible=false;
@@ -80,7 +82,9 @@ export class HeroFinish {
     const q=this.model.getWorldQuaternion(new THREE.Quaternion()).invert(),scale=this.model.getWorldScale(new THREE.Vector3()).x||1;
     this.sway.value.copy(s.x).applyQuaternion(q).divideScalar(scale);
   }
-  apply(enabled){this.enabled.value=enabled?1:0;for(const o of this.outlines)o.visible=enabled&&this.width.value>0;this.cinematic=enabled;this.setGlow(this.glow.value);}
+  apply(enabled){this.enabled.value=enabled?1:0;for(const o of this.outlines)o.visible=enabled&&this.width.value>0&&this.lensInkOn;this.cinematic=enabled;this.setGlow(this.glow.value);}
   setGlow(strength){this.glow.value=strength;for(const h of this.glowHulls)h.visible=Boolean(this.cinematic)&&strength>.01;}
+  // A lens may hide the ink line or thin it; the user's outline setting still applies on top.
+  setLensInk(visible,scale){this.inkScale.value=scale;if(this.lensInkOn!==visible){this.lensInkOn=visible;this.apply(Boolean(this.enabled.value));}}
   setWidth(width){this.width.value=width;this.apply(Boolean(this.enabled.value));}
 }

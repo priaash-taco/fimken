@@ -29,7 +29,7 @@ export class CinematicRenderer {
     const target=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType});
     this.composer = new EffectComposer(this.renderer,target);
     this.composer.addPass(new RenderPass(scene, camera));
-    this.heatWorld = new THREE.Vector3(0,1,0); this.heatProjection = new THREE.Vector3();
+    this.heatWorld = new THREE.Vector3(0,1,0); this.heatProjection = new THREE.Vector3(); this.mirrorWorld = new THREE.Vector3(); this.mirrorProjection = new THREE.Vector3(); this.shaftWorld = new THREE.Vector3(2.8,3,-2.5); this.shaftProjection = new THREE.Vector3();
     this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .22, .18, 2.4);
     this.composer.addPass(this.bloom);
     // The blur chain starts one octave lower (see resize), so each level takes the weight
@@ -39,10 +39,10 @@ export class CinematicRenderer {
     // Heat haze, grade, tone mapping and sRGB conversion share one full-screen pass.
     // The arithmetic and its order match the former separate passes.
     this.finish = new ShaderPass(new THREE.RawShaderMaterial({
-      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
+      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, lensSat:{value:1}, lensShadow:{value:new THREE.Vector3()}, lensBlack:{value:0}, lensVig:{value:0}, shafts:{value:0}, rays:{value:0}, shaftSrc:{value:new THREE.Vector2(.7,.8)}, mirrorY:{value:0}, mirror:{value:0}, fade:{value:1}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
       vertexShader:'precision highp float;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;attribute vec3 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`precision highp float;
-      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;varying vec2 vUv;
+      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;uniform float lensSat;uniform float lensBlack;uniform float lensVig;uniform float shafts;uniform float rays;uniform vec2 shaftSrc;uniform float mirrorY;uniform float mirror;uniform float fade;uniform vec3 lensShadow;varying vec2 vUv;
       #include <tonemapping_pars_fragment>
       #include <colorspace_pars_fragment>
       void main(){vec2 uv=vUv;
@@ -61,6 +61,20 @@ export class CinematicRenderer {
       c+=ringGlow*vec3(.18,.3,.5);float l=dot(c,vec3(.2126,.7152,.0722));
       c=mix(vec3(l),c,1.04);c*=vec3(1.+warmth,1.,1.-warmth*.55);
       c=mix(c,c*vec3(.66,.78,1.32)+vec3(.012,.0,.06)*l,cold);c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,1.+cold*.28);
+      // Lens: light shafts streaming from the hero's energy, and a reflection of the figure in a dark floor.
+      if(shafts>0.){float jit=fract(sin(dot(vUv*vec2(1917.,1079.),vec2(12.9898,78.233)))*43758.5453);vec2 sdir=(center-vUv)*(.7/16.);vec2 sp=vUv+sdir*jit;vec3 sacc=vec3(0.);float sw=1.;
+       for(int i=0;i<16;i++){sp+=sdir;vec3 s=texture2D(tDiffuse,clamp(sp,vec2(.001),vec2(.999))).rgb;float sl=dot(s,vec3(.2126,.7152,.0722));sacc+=min(s,vec3(3.))*smoothstep(1.6,3.4,sl)*sw;sw*=.93;}
+       c+=sacc*(shafts/16.)*.5*vec3(.62,.8,1.);}
+      if(rays>0.){vec2 rd=vUv-shaftSrc;rd.x*=aspect;float rdist=length(rd),rang=atan(rd.y,rd.x);
+       float r1=sin(rang*9.+time*.04)*.5+.5,r2=sin(rang*21.-time*.07+1.7)*.5+.5,r3=sin(rang*4.+time*.02)*.5+.5;
+       float ray=pow(r1*r2,2.)*(.4+.6*r3),rl=dot(c,vec3(.2126,.7152,.0722));
+       c+=vec3(.55,.72,1.)*ray*exp(-rdist*1.3)*(1.-smoothstep(.3,1.,rl))*rays*.16;}
+      if(mirror>0.&&vUv.y<mirrorY){float md=mirrorY-vUv.y;vec2 ru=vec2(vUv.x+sin(md*90.+time*.6)*.0006,mirrorY+md*1.04);
+       if(ru.y<.999){vec3 rf=(texture2D(tDiffuse,ru).rgb*2.+texture2D(tDiffuse,ru+vec2(.003,.004)).rgb+texture2D(tDiffuse,ru-vec2(.003,-.004)).rgb)*.25;
+        float floorMask=1.-smoothstep(.04,.22,dot(c,vec3(.2126,.7152,.0722)));
+        c+=rf*exp(-md*6.)*smoothstep(0.,.012,md)*mirror*floorMask*vec3(.8,.85,1.);}}
+      float lg=dot(c,vec3(.2126,.7152,.0722));c=mix(vec3(lg),c,lensSat);c+=lensShadow*(1.-smoothstep(0.,.45,lg));c=max(c-lensBlack,0.)/(1.-lensBlack);
+      c*=1.-lensVig*smoothstep(.2,.95,length((vUv-.5)*vec2(1.,.9)));
       // Attack treatment: the frame edges fall away, contrast rises, a release whites out for a beat.
       float edgeFall=smoothstep(.12,.72,length((vUv-.5)*vec2(1.,.85)));
       c*=1.-darken*edgeFall;c=max((c-.14)*contrast+.14,0.);c=mix(c,vec3(1.,.97,.9)*1.2,flash*.14);
@@ -69,7 +83,7 @@ export class CinematicRenderer {
        float streak=step(.80,pick)*smoothstep(.20+pick*.12,.62,length(s))*step(.35,fract(length(s)*3.-time*7.-pick*5.));
        c+=vec3(.75,.88,1.)*streak*speed*.85;}
       float v=1.-.22*smoothstep(.22,.74,length((vUv-.5)*vec2(1.,.8)));
-      c=ACESFilmicToneMapping(max(c*v,vec3(0.)));
+      c=ACESFilmicToneMapping(max(c*v*fade,vec3(0.)));
       gl_FragColor=sRGBTransferOETF(vec4(c,1.));}`,
     }));
     this.composer.addPass(this.finish);
@@ -132,8 +146,10 @@ export class CinematicRenderer {
     this.heatStrength = this.quality!=='low' && effects>.001 && power>.3 ? effects*(power-.3) : 0;
     finish.strength.value=this.heatStrength; finish.time.value=sceneTime;
     finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.blur.value=(this.blur||0)*(1-THREE.MathUtils.smoothstep(Math.max(Math.abs(this.heatProjection.x),Math.abs(this.heatProjection.y)),.8,1.3)); finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.shockR.value=this.shockR||0; finish.shockS.value=this.shockS||0; finish.aspect.value=this.camera.aspect; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
+    this.mirrorProjection.copy(this.mirrorWorld).project(this.camera);
+    finish.lensSat.value=this.lensSat??1; finish.lensShadow.value.set(...(this.lensShadow||[0,0,0])); finish.lensBlack.value=this.lensBlack||0; finish.lensVig.value=this.lensVig||0; finish.shafts.value=this.shafts||0; finish.rays.value=this.rays||0; this.shaftProjection.copy(this.shaftWorld).project(this.camera); finish.shaftSrc.value.set(this.shaftProjection.x*.5+.5,this.shaftProjection.y*.5+.5); finish.fade.value=this.fade??1; finish.mirror.value=this.mirror||0; finish.mirrorY.value=this.mirrorProjection.y*.5+.5;
     const energy = Math.max(0, power - .25) / .75;
-    this.bloom.strength = (.18 + energy * .1) * effects;
+    this.bloom.strength = (.18 + energy * .1) * effects * (this.lensBloom ?? 1);
     this.bloom.radius = .18 + energy * .22;
     if (this.inspection) this.renderer.render(this.scene, this.camera);
     else this.composer.render();

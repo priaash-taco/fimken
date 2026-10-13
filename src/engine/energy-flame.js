@@ -1,3 +1,4 @@
+import { lensFxGlsl, lensFxUniforms } from './lens.js';
 import { shaderPalette } from './palette.js';
 import * as THREE from 'three';
 // The aura is not one shell. It is four independently moving fields of warped noise drawn on
@@ -21,7 +22,7 @@ const vertexShader = `uniform vec2 size;uniform float behind;varying vec2 vUv;
   vec3 right=vec3(toCamera.z,0.,-toCamera.x);
   vec3 world=center-toCamera*behind+right*position.x*size.x+vec3(0.,1.,0.)*(position.y+.5)*size.y;
   gl_Position=projectionMatrix*viewMatrix*vec4(world,1.);}`;
-const fragmentShader = shaderPalette + `uniform sampler2D noiseTex;uniform float time,strength,wind,flash,hue,seed,scale,speed,warp,width,alpha,wisps,lobes,hollow;varying vec2 vUv;
+const fragmentShader = shaderPalette + lensFxGlsl + `uniform sampler2D noiseTex;uniform float time,strength,wind,flash,hue,seed,scale,speed,warp,width,alpha,wisps,lobes,hollow;varying vec2 vUv;
   void main(){
    vec2 q=vec2(vUv.x*2.-1.,vUv.y);float rise=time*speed;
    // Two nested warps: a slow large one bends the whole mass, a faster small one tears the edges.
@@ -52,15 +53,15 @@ const fragmentShader = shaderPalette + `uniform sampler2D noiseTex;uniform float
    color=mix(color,mix(p_brightAuraYellow,p_auraGlowCream,.55)*2.5,smoothstep(.65,1.,heat));
    color=mix(color,vec3(color.r*1.2,color.g*.26,color.b*.16),hue);   // Kaio-ken: the whole aura turns crimson
    color+=flash*.35*p_explosionYellow*a;
-   gl_FragColor=vec4(color,clamp(a,0.,1.)*strength);}`;
-const groundFragment = shaderPalette + `uniform sampler2D noiseTex;uniform float time,strength,flash;varying vec2 vP;
+   gl_FragColor=vec4(lensFx(color),clamp(a,0.,1.)*strength);}`;
+const groundFragment = shaderPalette + lensFxGlsl + `uniform sampler2D noiseTex;uniform float time,strength,flash;varying vec2 vP;
   void main(){float r=length(vP);float n=texture2D(noiseTex,vec2(atan(vP.y,vP.x)*.16+time*.05,r*.7-time*.12)).g;
    float glow=pow(max(0.,1.-r),2.)*(.7+.5*n);
-   gl_FragColor=vec4(mix(p_armorGold,p_superSaiyanGold,glow)*1.6+p_explosionYellow*flash,glow*(strength*.55+flash*.4));}`;
+   gl_FragColor=vec4(lensFx(mix(p_armorGold,p_superSaiyanGold,glow)*1.6+p_explosionYellow*flash),glow*(strength*.55+flash*.4));}`;
 export class EnergyFlame {
   constructor(scene, noise) {
     this.layers = LAYERS.map((layer, i) => {
-      const uniforms = { noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, wind: { value: 0 }, flash: { value: 0 }, hue: { value: 0 }, size: { value: new THREE.Vector2(layer.size[0], layer.size[1]) },
+      const uniforms = { ...lensFxUniforms(), noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, wind: { value: 0 }, flash: { value: 0 }, hue: { value: 0 }, size: { value: new THREE.Vector2(layer.size[0], layer.size[1]) },
         behind: { value: layer.behind }, seed: { value: layer.seed }, scale: { value: layer.scale }, speed: { value: layer.speed }, warp: { value: layer.warp }, width: { value: layer.width },
         alpha: { value: layer.alpha }, wisps: { value: layer.wisps }, lobes: { value: layer.lobes }, hollow: { value: layer.hollow } };
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader, fragmentShader }));
@@ -68,7 +69,7 @@ export class EnergyFlame {
       return { mesh, uniforms, base: layer };
     });
     // Light thrown on the ground under the hero.
-    this.groundUniforms = { noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, flash: { value: 0 } };
+    this.groundUniforms = { ...lensFxUniforms(), noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, flash: { value: 0 } };
     this.ground = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.ShaderMaterial({ uniforms: this.groundUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
       vertexShader: 'varying vec2 vP;void main(){vP=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}', fragmentShader: groundFragment }));
     this.ground.rotation.x = -Math.PI / 2; this.ground.visible = false; scene.add(this.ground);

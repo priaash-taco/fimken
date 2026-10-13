@@ -8,8 +8,8 @@ const args = process.argv.slice(2), option = (n, f) => { const i = args.indexOf(
 const out = option('out', 'art/previews/motion/live'); mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge', args: ['--force_high_performance_gpu'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-const errors = []; page.on('pageerror', e => errors.push(e.message));
-await page.goto(`http://127.0.0.1:${option('port', process.env.FIMKEN_PORT || 5173)}/?controls=1`);
+const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
+await page.goto(`http://127.0.0.1:${option('port', process.env.FIMKEN_PORT || 5173)}/?controls=1${option('lens', '') ? '&lens=' + option('lens', '') : ''}`);
 await page.waitForFunction(() => document.querySelector('#battle')?.dataset.ready === 'true' && window.__fimken, null, { timeout: 90000 });
 let current = null;
 for (const shot of option('shots', 'stance:1,powerup:3.5,charge:3,blast:3.75,blast:4.7,hardLanding:1.3').split(',')) {

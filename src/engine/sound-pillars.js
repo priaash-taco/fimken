@@ -1,3 +1,4 @@
+import { lensFxGlsl, lensFxUniforms } from './lens.js';
 import { shaderPalette } from './palette.js';
 import * as THREE from 'three';
 // A ring of light columns at the edge of the arena, one per slice of the spectrum. Each column
@@ -20,7 +21,7 @@ export class SoundPillars {
     geometry.setAttribute('band', new THREE.InstancedBufferAttribute(band, 1)); geometry.setAttribute('seed', new THREE.InstancedBufferAttribute(seed, 1));
     geometry.setAttribute('level', this.levelAttr); geometry.instanceCount = COUNT;
     this.band = band;
-    this.uniforms = { noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 1 } };
+    this.uniforms = { ...lensFxUniforms(), noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 1 } };
     this.mesh = new THREE.Mesh(geometry, new THREE.ShaderMaterial({ uniforms: this.uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
       vertexShader: `attribute float angle;attribute float radius;attribute float band;attribute float seed;attribute float level;varying vec2 vUv;varying float vLevel;varying float vBand;varying float vSeed;
         void main(){vUv=uv;vLevel=level;vBand=band;vSeed=seed;
@@ -30,7 +31,7 @@ export class SoundPillars {
          float h=1.+level*11.,w=.45+level*.5;
          vec3 world=base+right*position.x*w+vec3(0.,uv.y*h,0.);
          gl_Position=projectionMatrix*viewMatrix*vec4(world,1.);}`,
-      fragmentShader: shaderPalette + `uniform sampler2D noiseTex;uniform float time,strength;varying vec2 vUv;varying float vLevel;varying float vBand;varying float vSeed;
+      fragmentShader: shaderPalette + lensFxGlsl + `uniform sampler2D noiseTex;uniform float time,strength;varying vec2 vUv;varying float vLevel;varying float vBand;varying float vSeed;
         void main(){
          float x=vUv.x*2.-1.,y=vUv.y;
          float n=texture2D(noiseTex,vec2(x*.35+vSeed*3.,y*.55-time*(.5+vLevel*1.2))).r;
@@ -41,7 +42,7 @@ export class SoundPillars {
          vec3 low=mix(p_deepBeamBlue,p_kamehamehaBlue,smoothstep(0.,.5,vBand));
          vec3 col=mix(low,mix(p_friezaPurple,p_superSaiyanGold,smoothstep(.55,1.,vBand)),smoothstep(.3,.9,vBand));
          col=mix(col,p_spiritGlowWhite,pow(1.-y,3.)*vLevel*.8);
-         gl_FragColor=vec4(col*a*(.6+vLevel*1.9)*strength,1.);}` }));
+         gl_FragColor=vec4(lensFx(col*a*(.6+vLevel*1.9))*strength,1.);}` }));
     this.mesh.frustumCulled = false; this.mesh.renderOrder = -6; this.mesh.visible = false; scene.add(this.mesh);
   }
   // bins: 0..255 FFT magnitudes (or null when silent); sampleRate for frequency mapping.

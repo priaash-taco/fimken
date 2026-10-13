@@ -1,3 +1,4 @@
+import { lensFxGlsl, lensFxUniforms } from './lens.js';
 import { shaderPalette } from './palette.js';
 import * as THREE from 'three';
 // What a hit leaves on the ground: a ring of dust thrown outward, and radial cracks that
@@ -27,12 +28,12 @@ export class GroundMarks {
     this.shock=new THREE.Mesh(new THREE.RingGeometry(.93,1,128),ringMaterial('#67DDF7',0));this.shock2=new THREE.Mesh(new THREE.RingGeometry(.7,1,128),ringMaterial('#1267D6',0));
     for(const m of [this.shock,this.shock2]){m.rotation.x=-Math.PI/2;m.visible=false;m.renderOrder=-6;scene.add(m);}
     // Crater glow: the ground stays lit where the beam or a heavy hit landed, cooling over several seconds.
-    this.craterUniforms={age:{value:99},strength:{value:0},time:{value:0}};
+    this.craterUniforms={...lensFxUniforms(),age:{value:99},strength:{value:0},time:{value:0}};
     this.crater=new THREE.Mesh(new THREE.CircleGeometry(1,48),new THREE.ShaderMaterial({uniforms:this.craterUniforms,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
       vertexShader:'varying vec2 vP;void main(){vP=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-      fragmentShader:shaderPalette+`uniform float age;uniform float strength;uniform float time;varying vec2 vP;${noise}
+      fragmentShader:shaderPalette+lensFxGlsl+`uniform float age;uniform float strength;uniform float time;varying vec2 vP;${noise}
       void main(){float r=length(vP),flick=.8+.2*noise3(vec3(vP*3.,time*2.));float glow=pow(max(0.,1.-r),2.)*exp(-max(age,0.)*.45)*flick;
-       vec3 color=mix(p_explosionRed,p_explosionYellow,glow)*1.6;gl_FragColor=vec4(color,glow*strength*.8);}`}));
+       vec3 color=lensFx(mix(p_explosionRed,p_explosionYellow,glow)*1.6);gl_FragColor=vec4(color,glow*strength*.8);}`}));
     this.crater.rotation.x=-Math.PI/2;this.crater.renderOrder=-6;this.crater.visible=false;scene.add(this.crater);
     // Dust ring: points thrown outward and up, settling as they fade.
     const count=320,seeds=new Float32Array(count);for(let i=0;i<count;i++)seeds[i]=(i*.618033)%1;

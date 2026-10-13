@@ -45,6 +45,7 @@ document.querySelector('#app').innerHTML = `
       <label class="toggle-row" for="asset-inspection"><span>Neutral view<small>Plain lighting, effects off</small></span><input id="asset-inspection" aria-label="Inspect without effects" type="checkbox"></label>
       <label class="range-label" for="effects">Energy & effects<output id="effects-value">65%</output></label><input id="effects" type="range" min="0" max="100" value="65">
       <label class="select-label" for="view">Camera view<select id="view"><option value="training">Full body</option><option value="portrait">Close-up</option></select></label>
+      <label class="select-label" for="lens">Rendering lens<select id="lens" aria-label="Rendering lens"><option value="classic" selected>Current</option><option value="noir">Noir · light sculpture</option><option value="volume">Volume · cinematic energy</option><option value="chroma">Chroma · motion art</option></select></label>
       <label class="toggle-row" for="auto-camera"><span>Cinematic camera</span><input id="auto-camera" type="checkbox" checked></label>
     </section>
     <details id="quality-debug" class="settings-disclosure"><summary>Quality / debug</summary>
@@ -268,6 +269,7 @@ sync();
 // Persist visual preferences only. Audio capture always requires a fresh gesture.
 const storageKey = 'fimken.v1.settings';
 const selectBindings = {
+  lens: value => scene?.setLens(value),
   environment: value => scene?.setEnvironment(value),
   quality: value => scene?.setQuality(value),
   routine: value => { if (scene?.director) { scene.director.mode = value; scene.resetTraining(); } },
@@ -284,7 +286,7 @@ for (const button of document.querySelectorAll('[data-practice]')) button.addEve
 });
 
 function savePreferences() {
-  const ids = ['sensitivity', 'effects', 'impactStrength', 'view', 'environment', 'quality', 'routine', 'physics', 'auto-camera'];
+  const ids = ['sensitivity', 'effects', 'impactStrength', 'view', 'lens', 'environment', 'quality', 'routine', 'physics', 'auto-camera'];
   const values = Object.fromEntries(ids.map(id => [id, $(`#${id}`).type === 'checkbox' ? $(`#${id}`).checked : $(`#${id}`).value]));
   try { localStorage.setItem(storageKey, JSON.stringify(values)); } catch { /* Storage may be unavailable. */ }
 }
@@ -300,7 +302,7 @@ async function restorePreferences() {
       $(`#${id}`).value = value; $(`#${id}`).dispatchEvent(new Event('input'));
     }
   }
-  for (const id of ['view', 'environment', 'quality', 'routine']) {
+  for (const id of ['view', 'lens', 'environment', 'quality', 'routine']) {
     const select = $(`#${id}`);
     if (!(CHARACTER.defaultReview && (id==='view' || id==='routine')) && [...select.options].some(option => option.value === saved[id])) {
       select.value = saved[id]; select.dispatchEvent(new Event('change'));
@@ -347,7 +349,7 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   // Audio is the first original section and remains available.
   $('.settings-section').hidden=false;
   const display=document.createElement('section');display.className='essential-display';
-  for(const id of ['quality','auto-camera','asset-inspection','reduced-motion'])display.append($('#'+id).closest('label'));
+  for(const id of ['lens','quality','auto-camera','asset-inspection','reduced-motion'])display.append($('#'+id).closest('label'));
   display.append(document.querySelector('label[for="effects"]'),$('#effects'));
   dialog.insertBefore(display,$('.settings-about'));
   $('#source-status').textContent='Connect PC audio, your microphone or a music file.';

@@ -1,3 +1,4 @@
+import { lensFxGlsl, lensFxUniforms } from './lens.js';
 import { shaderPalette } from './palette.js';
 import * as THREE from 'three';
 // The beam is one continuous energetic mass, not a tube with lines on it. An invisible camera-facing
@@ -7,13 +8,13 @@ import * as THREE from 'three';
 // Detail (streaks) comes from the same noise at lower strength, so it merges into the body.
 export class PlasmaBeam {
   constructor(scene, noise) {
-    this.uniforms = { noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, origin: { value: new THREE.Vector3() }, dir: { value: new THREE.Vector3(0, 0, 1) },
+    this.uniforms = { ...lensFxUniforms(), noiseTex: { value: noise }, time: { value: 0 }, strength: { value: 0 }, origin: { value: new THREE.Vector3() }, dir: { value: new THREE.Vector3(0, 0, 1) },
       length: { value: 10 }, carrier: { value: 1 }, radius: { value: .5 }, tint: { value: 0 }, wave: { value: 0 } };
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 1, 1, 32), new THREE.ShaderMaterial({ uniforms: this.uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
       vertexShader: `uniform vec3 origin;uniform vec3 dir;uniform float length;uniform float carrier;varying float vU;varying float vV;
         void main(){float v=position.y+.5;vec3 P=origin+dir*(v*length);vec3 side=normalize(cross(dir,normalize(cameraPosition-P))+vec3(1e-5));
          vU=position.x;vV=v;gl_Position=projectionMatrix*viewMatrix*vec4(P+side*position.x*carrier,1.);}`,
-      fragmentShader: shaderPalette + `uniform sampler2D noiseTex;uniform float time,strength,length,carrier,radius,tint,wave;varying float vU;varying float vV;
+      fragmentShader: shaderPalette + lensFxGlsl + `uniform sampler2D noiseTex;uniform float time,strength,length,carrier,radius,tint,wave;varying float vU;varying float vV;
         void main(){
          float s=vV*length;                                   // metres from the hands
          float w0=radius/carrier;                             // half-width of the body, as a fraction of the carrier
@@ -34,7 +35,7 @@ export class PlasmaBeam {
          vec3 color=cDeep*envelope*.9+mix(cDeep,cBlue,flow)*bodyField*1.0+cCyan*bodyField*bodyField*.55+p_spiritGlowWhite*core*1.8;
          // Ends: grows out of the hands, thins away in the distance.
          color*=smoothstep(0.,.015,vV)*(1.-smoothstep(.55,1.,vV));
-         gl_FragColor=vec4(color*strength,1.);}` }));
+         gl_FragColor=vec4(lensFx(color)*lensBeam*strength,1.);}` }));
     this.mesh.frustumCulled = false; this.mesh.visible = false; this.mesh.renderOrder = 3; scene.add(this.mesh);
   }
   update(time, origin, direction, strength, { length = 10, radius = .5, tint = 0, wave = 0 } = {}) {

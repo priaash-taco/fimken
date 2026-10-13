@@ -76,7 +76,7 @@ export class CosmicWorld {
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(p,3));
   this.stars=new THREE.Points(geo,new THREE.PointsMaterial({color:'#bac9ff',size:.025,transparent:true,opacity:.7,depthWrite:false,fog:false}));this.root.add(this.stars);
  }
- setInspection(enabled){this.root.visible=!enabled;}
+ setInspection(enabled){this.root.visible=!enabled&&!this.lensHidden;}
  update(time){this.sun.rotation.y=time*.003;this.air.time.value=time;}
  setMood(mood,effects){const l=mood.levels;
   // Brighter and bigger in a power-up; dimmed and shrunk behind a charge or beam.

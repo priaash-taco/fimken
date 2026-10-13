@@ -8,6 +8,7 @@ import { AudioAnalyzer, MusicState } from './engine/music-state.js';
 import { SoundPillars } from './engine/sound-pillars.js';
 import { RockSmash } from './engine/rock-smash.js';
 import { SignatureFX } from './engine/signature-fx.js';
+import { LensController } from './engine/lens.js';
 import { FreestyleDirector } from './engine/freestyle-director.js';
 import { SceneDirector } from './engine/scene-director.js';
 import { CinematicDirector } from './engine/cinematic-director.js';
@@ -50,6 +51,8 @@ export class TrainingScene {
     this.scene.add(this.actor.root);
     this.vfx = new VFXDirector(this.scene);this.pillars = new SoundPillars(this.scene, this.vfx.noise);this.rocks = new RockSmash(this.scene, this.vfx.noise);this.sig = new SignatureFX(this.scene, this.vfx.noise);
     this.mood = new SceneMood(); this.marks = new GroundMarks(this.scene);
+    this.lens = new LensController({ scene: this.scene, world: this.world, lighting: this.lighting, pipeline: this.pipeline, getActor: () => this.actor, getPillars: () => this.pillars });
+    { const requested = new URLSearchParams(location.search).get('lens'); if (requested) this.lens.set(requested); }
     this.moveIds = () => Object.keys(SHOWCASE_MOVES).filter(id => !['sequence', 'stance', 'charge-pose', 'beam-pose'].includes(id));
     // Poses on twos during fast action (12 fps body, full-rate camera and effects): ?twos=1 or the T key.
     this.actor.twos = new URLSearchParams(location.search).get('twos') === '1';
@@ -84,6 +87,7 @@ export class TrainingScene {
     this.canvas.dataset.inspection = String(this.inspection);
     this.world.setInspection(this.inspection);
     this.lighting.setInspection(this.inspection);
+    this.lens?.setInspection(this.inspection);
     this.actor.setInspection(this.inspection);
     this.pipeline.inspection = this.inspection;
     document.querySelector('.vignette')?.classList.toggle('inspection-hidden', this.inspection);
@@ -131,6 +135,7 @@ export class TrainingScene {
     this.oninteraction?.();
   }
   practice(action) { if(this.comparisonSaved)this.compareRendering('exit');this.director.practice(action); this.paused = false; this.oninteraction?.(); }
+  setLens(name) { this.lens.select(name); }
   setEnvironment(name) { this.environment = name; this.world.setTheme(name); }
   setQuality(name) {
     this.pipeline.setQuality(name);
@@ -233,6 +238,8 @@ export class TrainingScene {
     this.lighting.update(this.actor.root.position, this.director.power, effects, this.actor, this.director.signals);
     if (this.loaded) this.vfx.update(animate ? dt : 0, this.time, this.actor, this.director, this.music, effects, !animate);
     this.pillars.update(Math.min(.05,wallDt), this.time, active ? bins : null, this.audio.context?.sampleRate || 44100, effects, this.music);
+    this.lens.update(wallDt, { music: this.music, director: this.director, mood: this.mood, effects, camera: this.camera, hero: this.actor.root.position });
+    this.canvas.dataset.lens = this.lens.name;
     this.controls.update();
     const position = this.camera.position.clone();
     if(this.reducedMotion)this.shake=0;
