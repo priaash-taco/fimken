@@ -93,3 +93,6 @@ bass hit -> heavy punch; crescendo -> charge and beam; drop -> dash; held tone -
 66. Spirit Bomb: open both hands to the sky, raise both arms, hold while a huge orb grows overhead and energy streams in from far away, the whole body straining; hurl it down so it bursts on the ground. [built: spiritBomb]
 67. Dragon Fist: coil low with the fist at the hip, hold the load, rising uppercut that sends a golden serpentine dragon of energy into the sky. [built: dragonFist]
 68. Kaio-ken: bear down, gather it in, the aura flares crimson with a shout, then a rush of dashing punches before the aura fades. [built: kaioken]
+
+## Captured motion (real human performers)
+69+. Karate front kick, roundhouse, side kick, lunge punch, down block, knife-hand block, and punch, kick and block sequences from the CMU motion-capture database, converted to this rig's pose parameters (src/engine/mocap/clips.json). Ids are `mocap_<clip>_<n>`. They join the freestyle pool: punches and blocks from the training tiers, kicks from the harder ones. [built: mocap_*]

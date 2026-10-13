@@ -137,6 +137,9 @@ export class ShowcaseDirector {
     // Interruptions blend from the currently displayed pose, never pop back to neutral.
     if(this.from && this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35);for(const k of Object.keys(this.pose))this.pose[k]=Array.isArray(this.pose[k])?this.pose[k].map((v,j)=>THREE.MathUtils.lerp(this.from[k][j],v,u)):THREE.MathUtils.lerp(this.from[k],this.pose[k],u);}
     if(this.from && this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35),start=this.from.yaw||0;const raw=samplePose(this.move.keys,this.time).yaw;this.pose.yaw=THREE.MathUtils.lerp(start,start+Math.atan2(Math.sin(raw-start),Math.cos(raw-start)),u);}
+    if(this.from&&this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35),target=samplePose(this.move.keys,this.time);
+      for(const side of ['leftFoot','rightFoot']){const a=this.from[side],b=target[side];if(!a||!b||a[1]>.05||b[1]>.05)continue;
+        const d=Math.hypot(b[0]-a[0],b[2]-a[2]);if(d>.06)this.pose[side]=[this.pose[side][0],this.pose[side][1]+Math.sin(Math.PI*u)*Math.min(.14,d*.45),this.pose[side][2]];}}
     const follow=this.pose.hitStop>.99?this.pose:samplePose(this.move.keys,Math.max(0,this.time-.055));
     const head=this.pose.hitStop>.99?this.pose:samplePose(this.move.keys,Math.max(0,this.time-.095));
     this.pose.followTwist=follow.twist;this.pose.followLean=follow.lean;this.pose.headTwist=head.twist;

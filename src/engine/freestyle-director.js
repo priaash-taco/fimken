@@ -1,5 +1,6 @@
 import {ShowcaseDirector,SHOWCASE_MOVES,unwind} from './showcase-director.js';
 import {HeroMotionPhysics} from './hero-motion-physics.js';
+import {MOCAP_IDS} from './mocap-moves.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // How much each move may change between performances: mirrored left-to-right, and turned to
 // a new heading by up to this many radians. Moves tied to one side or one camera stay as authored.
@@ -10,6 +11,9 @@ const VARIATION={spiritBomb:{turn:.6},dragonFist:{mirror:true,turn:.7},kaioken:{
 const TIERS=[['relaxedIdle','combatIdle','alert','neckRoll','wristWarmup','stretch','reset','calmPost','exhaustion'],['bounce','stepForward','stepBack','shuffle','combatIdle','alert','stanceShift','slip','duck','forearmBlock'],
   ['strikes','jabCross','flurry','frontKick','highKick','spin','bounce','vanish','stepForward','shuffle','dashBack','oneHandBlast','doublePalm','trainingCombo'],['heavy','heavyKick','backKick','dash','flying','flip','airCombo','hardLanding','threePoint','flight','vanish','barrage','energyThrow','teleport','energyBlock','boulderPunch','boulderKick','rockThrow','groundPound','divePunch'],
   ['powerup','blast','beamStruggle','transformation','airCombo','flying','heavyKick','backKick','barrage','groundPound','divePunch','boulderPunch','spiritBomb','dragonFist','kaioken']];
+// Captured moves join the pool: punches and blocks from the training tiers, kicks from the harder ones.
+TIERS[2].push(...MOCAP_IDS.punch,...MOCAP_IDS.block);TIERS[3].push(...MOCAP_IDS.kick);
+for(const id of Object.values(MOCAP_IDS).flat())VARIATION[id]={mirror:true,turn:.7};
 const TIER_OF=Object.fromEntries(TIERS.flatMap((ids,t)=>ids.map(id=>[id,t])));
 const SOFT=new Set(['calmPost','exhaustion','stanceShift','slip','duck','forearmBlock','dashBack','relaxedIdle','alert','neckRoll','wristWarmup','stretch','bounce','combatIdle','stepForward','stepBack','shuffle','reset','stance','hover']);
 const flipX=v=>[-v[0],v[1],v[2]];

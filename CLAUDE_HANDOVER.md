@@ -224,3 +224,9 @@ Read this section as overriding anything earlier that it contradicts.
 - Music: Noir uses bass for the key and sweep light, transients for rim accents, sustained energy for detail. Volume uses bass, builds and drops for energy light, fog and rays. Chroma moves a cyan-violet-magenta phase with the mids and highs and uses bass for weight.
 - Neutral view forces the Current look. Camera treatment is not part of a lens: the cinematic director owns fov.
 - scripts/check-lens-ui.mjs drives the dropdown. scripts/capture-live.mjs takes --lens. All four lenses hold 60 fps at 1080p on the RTX (scripts/measure-performance.mjs --query lens=name).
+
+## Captured motion
+- 23 short moves from real motion capture (CMU database, free to use; see art/mocap/README.md). scripts/convert-mocap.mjs reads BVH, scales legs, torso width and arms separately to this rig, writes keys in the rig's own pose parameters, finds the strikes and slices each clip between calm frames. src/engine/mocap-moves.js builds the moves; they go through the same keep-out, life layer, director and effects as hand-keyed moves.
+- Entry blends now lift a planted foot into a small step when it has to travel (showcase-director.js), instead of sliding.
+- scripts/check-mocap.mjs measures how closely the rig follows the capture (about 11 cm RMS on hands and ankles, with the life layer and keep-out on) and planted-foot slide (about 17 cm/s after the entry blend, the same as the capture data itself).
+- Next if wanted: more clips (boxing, flips, jumps), a cleaner model (see the earlier model discussion), and pose-estimated clips from video.

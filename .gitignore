@@ -39,3 +39,6 @@ public/characters/goku-hero/
 public/characters/goku.glb
 public/characters/beerus.glb
 public/studies/
+
+# Raw motion-capture downloads (see art/mocap/README.md)
+art/mocap/cmu/
