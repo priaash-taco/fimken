@@ -132,37 +132,66 @@ function findPeaks(rows, limbs, kind, k, want) {
 const round = (x, n = 3) => +x.toFixed(n);
 const roundArr = a => a.map(x => round(x));
 const CLIPS = [
-  // file, kind, label prefix, how many strikes to keep, fist
+  // file, kind, label, how many to keep, fist
   ['135_04', 'kick', 'Karate front kick', 3, .8], ['135_07', 'kick', 'Karate roundhouse', 3, .8], ['135_11', 'kick', 'Karate side kick', 3, .8],
   ['135_09', 'punch', 'Karate lunge punch', 3, 1], ['135_05', 'block', 'Karate down block', 2, .9], ['135_10', 'block', 'Karate knife-hand block', 2, .1],
   ['144_13', 'punch', 'Punch sequence', 2, 1], ['144_20', 'punch', 'Punch combination', 2, 1], ['144_05', 'kick', 'Front kick', 2, .8], ['144_26', 'block', 'Blocks', 2, .9],
+  ['144_14', 'punch', 'Left punch sequence', 2, 1], ['144_21', 'punch', 'Punch sequence B', 2, 1], ['144_06', 'kick', 'Front kicks', 2, .8], ['144_09', 'kick', 'Left front kick', 2, .8],
+  ['144_07', 'block', 'Left blocks', 2, .9], ['144_27', 'block', 'Right blocks', 2, .9],
+  ['76_01', 'punch', 'Backstep and punch', 2, 1], ['76_02', 'punch', 'Feint and strike', 2, 1], ['76_03', 'block', 'Dodge an attacker', 2, .8], ['76_11', 'block', 'Quick backsteps', 2, .7], ['76_04', 'flow', 'Guard stance', 1, .8],
+  ['127_29', 'block', 'Duck under', 1, .5], ['127_13', 'block', 'Side step', 1, .5], ['127_14', 'block', 'Side step', 1, .5], ['127_05', 'block', 'Quick stop', 1, .5],
+  ['118_01', 'jump', 'Jump', 1, .3], ['118_05', 'jump', 'Jump', 1, .3], ['118_10', 'jump', 'Jump', 1, .3], ['118_15', 'jump', 'Jump', 1, .3],
+  ['16_03', 'jump', 'High jump', 1, .3], ['16_05', 'jump', 'Forward jump', 1, .3], ['85_01', 'jump', 'Twisting jump', 2, .4], ['127_21', 'jump', 'Run, jump and stop', 1, .3],
+  ['135_01', 'flow', 'Bassai kata', 5, .9], ['135_02', 'flow', 'Empi kata', 4, .9], ['135_06', 'flow', 'Heian kata', 4, .9],
+  ['12_04', 'flow', 'Tai chi', 8, .2], ['42_01', 'flow', 'Full stretch', 2, .2], ['85_04', 'flow', 'Fancy footwork', 3, .4],
 ];
-const clips = [], targets = {};
+const MAX_TRAVEL = 1.6, clips = [], targets = {}, counters = {};
+const reachable = r => [r.left, r.right].every(h => h[1] > .3 && h[1] < 2.1 && Math.hypot(h[0], h[2]) < 1.1) && r.crouch > -.15 && r.crouch < .6 && Math.abs(r.lean) < 1.25 && Math.abs(r.twist) < 1.25;
 for (const [file, kind, label, want, fist] of CLIPS) {
   const bvh = parseBvh(readFileSync(`art/mocap/cmu/${file}.bvh`, 'utf8')), srcFps = Math.round(1 / bvh.frameTime);
   const frames = worldFrames(bvh), { rows: raw, kLeg } = solve(frames, file), rows = resample(raw, srcFps);
-  const limbs = kind === 'kick' ? ['leftFoot', 'rightFoot'] : kind === 'punch' ? ['leftHand', 'rightHand'] : ['leftHand', 'rightHand'];
-  const speedScale = kind === 'kick' ? kLeg * 1 : kLeg;
-  const peaks = findPeaks(rows, limbs, kind, speedScale, want);
-  peaks.sort((a, b) => a.t - b.t).forEach((p, n) => {
-    const speeds = ['leftHand', 'rightHand', 'leftFoot', 'rightFoot'].map(l => limbSpeed(rows, l, speedScale));
-    const calm = i => { let s = 0, n = 0; for (let k = Math.max(0, i - 3); k <= Math.min(rows.length - 1, i + 3); k++) { s += speeds.reduce((a, sp) => a + sp[k], 0) + 6 * (rows[k].leftFootAbs[1] + rows[k].rightFootAbs[1] - .296); n++; } return s / n; };
-    const pick = (from, to) => { let best = Math.max(0, Math.min(rows.length - 1, from)), bestScore = Infinity; for (let i = Math.max(0, from); i <= Math.min(rows.length - 1, to); i++) { const sc = calm(i); if (sc < bestScore) { bestScore = sc; best = i; } } return best; };
-    const start = pick(p.i - Math.round(2.2 * FPS), p.i - Math.round(.5 * FPS)), end = pick(p.i + Math.round(.9 * FPS), p.i + Math.round(2 * FPS)), seg = rows.slice(start, end + 1);
-    const allSpeeds = limbs.map(l => limbSpeed(rows, l, speedScale)), maxSpeed = p.speed;
-    const y0 = seg[0].yaw, tx = seg[0].travel[0], tz = seg[0].travel[1], c0 = Math.cos(-y0), s0 = Math.sin(-y0);
+  const strike = kind === 'kick' || kind === 'punch' || kind === 'block';
+  const limbs = kind === 'kick' ? ['leftFoot', 'rightFoot'] : ['leftHand', 'rightHand'];
+  const speeds = ['leftHand', 'rightHand', 'leftFoot', 'rightFoot'].map(l => limbSpeed(rows, l, kLeg));
+  // The calmest moment in a range: little limb speed and both feet down.
+  const calm = i => { let s = 0, n = 0; for (let k = Math.max(0, i - 3); k <= Math.min(rows.length - 1, i + 3); k++) { s += speeds.reduce((a, sp) => a + sp[k], 0) + 6 * (rows[k].leftFootAbs[1] + rows[k].rightFootAbs[1] - .296); n++; } return s / n; };
+  const pick = (from, to) => { let best = Math.max(0, Math.min(rows.length - 1, from)), bestScore = Infinity; for (let i = Math.max(0, from); i <= Math.min(rows.length - 1, to); i++) { const sc = calm(i); if (sc < bestScore) { bestScore = sc; best = i; } } return best; };
+  const slices = [];
+  if (strike) {
+    for (const pk of findPeaks(rows, limbs, kind, kLeg, want * 2).sort((x, y) => x.t - y.t)) slices.push({ start: pick(pk.i - Math.round(2.2 * FPS), pk.i - Math.round(.5 * FPS)), end: pick(pk.i + Math.round(.9 * FPS), pk.i + Math.round(2 * FPS)), peak: pk });
+  } else if (kind === 'jump') {
+    const peaks = [];
+    for (let i = 4; i < rows.length - 4; i++) if (rows[i].lift > .1 && rows[i].lift >= Math.max(...rows.slice(i - 4, i + 5).map(r => r.lift))) peaks.push({ i, lift: rows[i].lift });
+    peaks.sort((x, y) => y.lift - x.lift);
+    const chosen = []; for (const pk of peaks) if (chosen.every(c => Math.abs(c.i - pk.i) > 2.2 * FPS)) chosen.push(pk);
+    for (const pk of chosen.slice(0, want * 2).sort((x, y) => x.i - y.i)) { let land = pk.i; while (land < rows.length - 1 && rows[land].lift > .03) land++; slices.push({ start: pick(pk.i - Math.round(2 * FPS), pk.i - Math.round(.6 * FPS)), end: pick(land + Math.round(.3 * FPS), land + Math.round(1.6 * FPS)), jump: { land, height: pk.lift } }); }
+  } else {
+    for (let k = 0; k < want * 2; k++) { const center = Math.round((k + .5) * rows.length / (want * 2)), start = pick(center - 15, center + 15); slices.push({ start, end: pick(start + Math.round(3.2 * FPS), start + Math.round(4.8 * FPS)) }); }
+  }
+  let kept = 0;
+  for (const sl of slices) {
+    if (kept >= want || sl.end - sl.start < 30) continue;
+    const seg = rows.slice(sl.start, sl.end + 1);
+    if (!seg.every(reachable)) continue;
+    if (seg.some(r => Math.hypot(r.travel[0] - seg[0].travel[0], r.travel[1] - seg[0].travel[1]) > MAX_TRAVEL)) continue;
+    const y0 = seg[0].yaw, tx = seg[0].travel[0], tz = seg[0].travel[1], c0 = Math.cos(-y0), s0 = Math.sin(-y0), maxSpeed = sl.peak?.speed || 1;
     const keys = seg.map((r, k) => {
-      const trails = [0, 0, 0]; const idx = start + k;
-      for (const [slot, limb] of [[0, 'leftHand'], [1, 'rightHand'], [2, 'rightFoot'], [2, 'leftFoot']]) { const sp = limbSpeed(rows, limb, speedScale)[idx] || 0; if (kind !== 'block' && sp > .6 * maxSpeed && limbs.includes(limb)) trails[slot] = 1; }
+      const trails = [0, 0, 0], idx = sl.start + k;
+      if (sl.peak) for (const [slot, limb, n] of [[0, 'leftHand', 0], [1, 'rightHand', 1], [2, 'leftFoot', 2], [2, 'rightFoot', 3]]) if (kind !== 'block' && limbs.includes(limb) && speeds[n][idx] > .6 * maxSpeed) trails[slot] = 1;
       return { at: round(k / FPS, 3), yaw: round(r.yaw - y0), twist: round(r.twist), lean: round(r.lean), bank: round(r.bank), crouch: round(r.crouch), lift: round(r.lift), headYaw: round(r.headYaw), headPitch: round(r.headPitch),
-        left: roundArr(r.left), right: roundArr(r.right), leftElbow: roundArr(r.leftElbow), rightElbow: roundArr(r.rightElbow), leftFoot: roundArr(r.leftFoot), rightFoot: roundArr(r.rightFoot), travel: roundArr([(r.travel[0] - tx) * c0 + (r.travel[1] - tz) * s0, -(r.travel[0] - tx) * s0 + (r.travel[1] - tz) * c0]), trails, fist };
+        left: roundArr(r.left), right: roundArr(r.right), leftElbow: roundArr(r.leftElbow), rightElbow: roundArr(r.rightElbow), leftFoot: roundArr(r.leftFoot), rightFoot: roundArr(r.rightFoot),
+        travel: roundArr([(r.travel[0] - tx) * c0 + (r.travel[1] - tz) * s0, -(r.travel[0] - tx) * s0 + (r.travel[1] - tz) * c0]), trails, fist };
     });
-    const id = `${file}_${n}`, strength = Math.min(1, .45 + p.speed / 12);
-    clips.push({ id, label: `${label} ${String.fromCharCode(65 + n)}`, kind, duration: round(seg.length / FPS - 1 / FPS, 3), keys, cues: kind === 'block' ? [] : [{ at: round((p.i - start) / FPS, 3), type: 'impact', limb: p.limb, strength: round(strength, 2) }] });
+    const letter = String.fromCharCode(65 + (counters[label] = (counters[label] ?? -1) + 1)), id = `${file}_${kept}`;
+    const cues = sl.peak && kind !== 'block' ? [{ at: round((sl.peak.i - sl.start) / FPS, 3), type: 'impact', limb: sl.peak.limb, strength: round(Math.min(1, .45 + sl.peak.speed / 12), 2) }]
+      : sl.jump ? [{ at: round((sl.jump.land - sl.start) / FPS, 3), type: 'landing', strength: round(Math.min(1, .4 + sl.jump.height * 1.2), 2) }] : [];
+    clips.push({ id, label: `${label} ${letter}`, kind, duration: round(seg.length / FPS - 1 / FPS, 3), keys, cues });
     targets[id] = seg.map(r => ({ left: roundArr(r.left), right: roundArr(r.right), leftFoot: roundArr(r.leftFootAbs), rightFoot: roundArr(r.rightFootAbs) }));
-  });
+    kept++;
+  }
+  console.log(file.padEnd(8), kind.padEnd(6), `${kept}/${want} kept (${slices.length} candidates)`);
 }
 mkdirSync('src/engine/mocap', { recursive: true });
 writeFileSync('src/engine/mocap/clips.json', JSON.stringify({ source: 'CMU Graphics Lab Motion Capture Database (free for any use), BVH conversion by Bruce Hahn, retargeted by scripts/convert-mocap.mjs', fps: FPS, clips }));
 writeFileSync('art/mocap/targets.json', JSON.stringify(targets));
-console.log(clips.map(c => `${c.id} ${c.kind} ${c.duration}s ${c.keys.length} keys impact ${c.cues[0] ? c.cues[0].limb + '@' + c.cues[0].at : '-'}`).join('\n'));
+console.log(clips.length + ' moves, ' + clips.reduce((n, c) => n + c.keys.length, 0) + ' keys');

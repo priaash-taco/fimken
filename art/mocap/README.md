@@ -4,16 +4,25 @@ Clips come from the CMU Graphics Lab Motion Capture Database in the BVH conversi
 https://github.com/Shriinivas/cmubvh (conversion by Bruce Hahn). CMU places no restrictions on use of
 the original dataset, and the conversion adds none.
 
-Raw BVH files are not committed (about 16 MB). To fetch the ones in use:
+Raw BVH files are not committed (about 60 MB). To fetch the ones in use and rebuild the moves:
 
-    mkdir -p art/mocap/cmu && cd art/mocap/cmu
-    B=https://github.com/Shriinivas/cmubvh/raw/main
-    for f in Sequence-131-135/135/Data/135_{04,05,07,09,10,11} Sequence-141-144/144/Data/144_{05,13,20,26}; do
-      curl -sL -o $(basename $f).zip "$B/$f.zip" && unzip -oq $(basename $f).zip && rm $(basename $f).zip
-    done
+    node scripts/fetch-mocap.mjs
+    node scripts/convert-mocap.mjs
 
-Then run `node scripts/convert-mocap.mjs`. It writes `src/engine/mocap/clips.json` (the moves) and
-`art/mocap/targets.json` (expected joint positions, used by `scripts/check-mocap.mjs`).
+The converter writes `src/engine/mocap/clips.json` (the moves) and `art/mocap/targets.json` (expected
+joint positions, used by `scripts/check-mocap.mjs`). Add clips by listing them in `CLIPS` in the converter
+and adding the subject's folder to `SEQUENCES` in the fetch script.
 
-Subjects: 135 is karate (front kick, roundhouse, lunge punch, side kick, down block, knife-hand block),
-144 is punching, kicking and blocking. Add more clips by listing them in `CLIPS` in the converter.
+What is in the library (kind decides which freestyle tier a move joins):
+
+| Kind | Source | Tier |
+| --- | --- | --- |
+| punch | karate lunge punches, punch sequences, backstep and feint attacks | training and up |
+| block | karate blocks, punching blocks, dodges, side steps | training and up |
+| kick | karate front, round and side kicks, front kicks | harder tiers |
+| jump | standing and forward jumps | harder tiers |
+| flow | karate katas (Bassai, Empi, Heian), tai chi, a full stretch, footwork, guard stance | quiet and training |
+
+Left out on purpose: clips where the body lies on the floor or goes upside down (rolls, cartwheels,
+flips, get-ups), because the rig has no floor-contact or inverted-body support yet, and runs and walks
+that travel more than about a metre and a half.

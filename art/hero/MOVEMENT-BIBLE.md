@@ -95,4 +95,4 @@ bass hit -> heavy punch; crescendo -> charge and beam; drop -> dash; held tone -
 68. Kaio-ken: bear down, gather it in, the aura flares crimson with a shout, then a rush of dashing punches before the aura fades. [built: kaioken]
 
 ## Captured motion (real human performers)
-69+. Karate front kick, roundhouse, side kick, lunge punch, down block, knife-hand block, and punch, kick and block sequences from the CMU motion-capture database, converted to this rig's pose parameters (src/engine/mocap/clips.json). Ids are `mocap_<clip>_<n>`. They join the freestyle pool: punches and blocks from the training tiers, kicks from the harder ones. [built: mocap_*]
+69+. Real human motion from the CMU capture database: karate kicks, punches and blocks, dodges, jumps, katas, tai chi and a stretch (68 moves, src/engine/mocap/clips.json). Ids are `mocap_<clip>_<n>`. They join the freestyle pool by kind. [built: mocap_*]
