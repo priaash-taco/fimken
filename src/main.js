@@ -45,7 +45,7 @@ document.querySelector('#app').innerHTML = `
       <label class="toggle-row" for="asset-inspection"><span>Neutral view<small>Plain lighting, effects off</small></span><input id="asset-inspection" aria-label="Inspect without effects" type="checkbox"></label>
       <label class="range-label" for="effects">Energy & effects<output id="effects-value">65%</output></label><input id="effects" type="range" min="0" max="100" value="65">
       <label class="select-label" for="view">Camera view<select id="view"><option value="training">Full body</option><option value="portrait">Close-up</option></select></label>
-      <label class="select-label" for="lens">Rendering lens<select id="lens" aria-label="Rendering lens"><option value="classic" selected>Current</option><option value="noir">Noir · light sculpture</option><option value="volume">Volume · cinematic energy</option><option value="chroma">Chroma · motion art</option></select></label>
+      <label class="select-label" for="lens">Vibes<select id="lens" aria-label="Vibes"><option value="classic" selected>Current</option><option value="noir">Noir · light sculpture</option><option value="volume">Volume · cinematic energy</option><option value="chroma">Chroma · motion art</option></select></label>
       <label class="toggle-row" for="auto-camera"><span>Cinematic camera</span><input id="auto-camera" type="checkbox" checked></label>
     </section>
     <details id="quality-debug" class="settings-disclosure"><summary>Quality / debug</summary>
