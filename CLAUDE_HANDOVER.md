@@ -231,3 +231,8 @@ Read this section as overriding anything earlier that it contradicts.
 - scripts/check-mocap.mjs measures how closely the rig follows the capture (about 11 cm RMS on hands and ankles, with the life layer and keep-out on) and planted-foot slide (about 17 cm/s after the entry blend, the same as the capture data itself).
 - Next if wanted: more clips (boxing, flips, jumps), a cleaner model (see the earlier model discussion), and pose-estimated clips from video.
 - Coverage now: punches, blocks and dodges, kicks, jumps, karate katas, tai chi, a full stretch and footwork (see art/mocap/README.md for the table and what was left out). scripts/fetch-mocap.mjs downloads the raw clips; scripts/convert-mocap.mjs gates every slice on travel and rig reach. clips.json is about 2 MB; if load time matters, load it lazily or thin the keys.
+
+## Model assessment (deformation under captured poses)
+- Close-ups (scripts/capture-closeup.mjs, art/previews/deform) of a high roundhouse, a deep dodge crouch, a jump and a lifted knee show clean skinning at shoulders, elbows, hips and knees: no pinching or volume collapse. The mesh did not need reworking for body motion.
+- Known remaining weak spots: fingers still curl as one group, the face is static apart from a few shape keys, and the gi and sash have no cloth bones. Fix these in Blender (.tools/blender-4.5.9-windows-x64 is in the project; art/hero/*.py are the earlier rig scripts) only if they start to show.
+- The converter now caps head yaw and pitch so a bowed head never buries the face in the hair.

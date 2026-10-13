@@ -92,7 +92,8 @@ function solve(frames, name) {
     const hf = V(0, 0, 1).transformDirection(f.M('Head')).applyAxisAngle(V(0, 1, 0), -yaw);
     out.headHeading = Math.atan2(hf.x, hf.z); out.headPitchAbs = -Math.asin(THREE.MathUtils.clamp(hf.y, -1, 1));
     out.travel = [hips.x, hips.z]; out.speedPoints = { leftHand: f.P('LeftHand'), rightHand: f.P('RightHand'), leftFoot: f.P('LeftFoot'), rightFoot: f.P('RightFoot') };
-    out.headYaw = wrap(out.headHeading - 0) - .4 * twist; out.headPitch = out.headPitchAbs - .75 * lean;
+    // Capped so a deep bow or a big turn never buries the face in the hair or snaps the neck.
+    out.headYaw = THREE.MathUtils.clamp(wrap(out.headHeading - 0) - .4 * twist, -.9, .9); out.headPitch = THREE.MathUtils.clamp(out.headPitchAbs - .75 * lean, -.45, .4);
     rows.push(out);
   }
   // Start facing +z with the root at the origin of its own path.
