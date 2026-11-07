@@ -31,5 +31,5 @@ test('the selected Meshy character is skinned and retains embedded source artwor
  const {report}=inspectGLB(readFileSync(new URL('../public'+CHARACTER.url,import.meta.url)));
  assert.deepEqual(report.errors,[]);assert.equal(report.skins,1);
  assert.ok(report.bones.includes('head'));assert.ok(report.bones.includes('hand.R'));
- assert.equal(report.embeddedImages,3);assert.ok(report.triangles<200000);
+ assert.ok(report.embeddedImages>=3,'authored textures stay embedded (plus generated eye textures)');assert.ok(report.triangles<200000);
 });

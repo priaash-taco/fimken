@@ -91,8 +91,8 @@
     "sourceTerms": false
   },
   "credit": "User-supplied Meshy model; local Blender rig with finger bones (fused fingers curl together). Animation: Quaternius / CC0.",
-  "url": "/characters/imported/meshy-hero/fd54bf758af037dd.glb",
+  "url": "/characters/imported/meshy-hero/acf1bc9752eaf20c.glb",
   "format": "gltf",
   "status": "candidate",
-  "sha256": "fd54bf758af037dd349b0d714fa3d2f836e4f3aef3049f4f7185eea884777e56"
+  "sha256": "acf1bc9752eaf20c37cc6abd05d5ee43c5399a82344fbd0ec762f870d919540a"
 }

@@ -5,8 +5,36 @@ import { AudioEngine } from './audio.js';
 import { TrainingScene } from './cinematic-scene.js';
 import { describeRendering } from './engine/render-diagnostics.js';
 import { CHARACTER } from './engine/assets.js';
+import { detectCapabilities, QUALITY_LABELS } from './engine/capabilities.js';
 
 installPaletteVariables(document.documentElement);
+
+const esc = text => String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const caps = detectCapabilities();
+
+// A full-page message in the app's own style, used when the browser cannot run the scene.
+function showUnsupported(found) {
+  document.querySelector('#app').innerHTML = `
+    <main class="fatal-page" aria-labelledby="fatal-title">
+      <section class="fatal-card">
+        <img class="fatal-mark" src="/logos/fimken-mark-256.png" alt="" width="72" height="72">
+        <h1 id="fatal-title">Fimken can’t start in this browser</h1>
+        <p>Fimken draws its hero live with <strong>WebGL 2</strong> and needs the graphics card to render to floating-point textures. ${found.webgl2 ? 'This browser has WebGL 2, but not the floating-point rendering it needs.' : 'This browser does not provide WebGL 2.'}</p>
+        <h2>What works</h2>
+        <ul>
+          <li>Desktop Chrome, Edge, Firefox or Safari 15+, up to date</li>
+          <li>Hardware acceleration switched on in the browser settings</li>
+          <li>A recent phone or tablet with Chrome or Safari</li>
+        </ul>
+        <p class="fatal-help">If you already use one of these, enable hardware acceleration, update your graphics drivers, then reload.</p>
+        <button class="fatal-button" id="fatal-reload">Reload</button>
+        <details><summary>What was detected</summary><pre>${esc(['WebGL 2: ' + (found.webgl2 ? 'yes' : 'no'), 'Float render targets: ' + (found.halfFloatRenderTargets ? 'yes' : 'no'), 'Max texture: ' + (found.maxTextureSize || 'n/a'), 'Graphics: ' + found.renderer, 'Problems: ' + (found.problems.join('; ') || 'none')].join('\n'))}</pre></details>
+      </section>
+    </main>`;
+  document.querySelector('#fatal-reload').addEventListener('click', () => location.reload());
+}
+
+function boot() {
 
 const paths = {
   settings: '<path d="m9 3-.6 2-2 .9-1.9-.5L2 9l1.5 1.5v3L2 15l2.5 3.6 1.9-.5 2 .9.6 2h6l.6-2 2-.9 1.9.5L22 15l-1.5-1.5v-3L22 9l-2.5-3.6-1.9.5-2-.9-.6-2Z"/><circle cx="12" cy="12" r="3"/>',
@@ -28,10 +56,33 @@ document.querySelector('#app').innerHTML = `
     <div class="vignette" aria-hidden="true"></div>
     <header class="topbar">
       <div class="identity"><a class="wordmark" href="/" aria-label="Fimken"><img class="logo" src="/logos/fimken-mark-256.png" alt="" width="40" height="40"><img class="wordmark-image" src="/logos/fimken-wordmark-120.png" alt="fimken" height="34"></a><span class="divider"></span><button class="icon-button" id="settings" aria-label="Open settings">${icon('settings')}</button></div>
+      <div class="top-actions"><button class="icon-button help-button" id="help" aria-label="Shortcuts and gestures" aria-haspopup="dialog" title="Shortcuts and gestures (?)">?</button></div>
     </header>
-    <div id="loading" class="loading-orbit" role="status" aria-label="Loading cinematic assets"></div>
+    <div id="first-run-hint" class="first-run-hint" role="status" hidden>Choose a sound to begin</div>
+    <div id="loading" class="loading-screen" role="status" aria-live="polite" aria-label="Loading Fimken">
+      <img class="loading-mark" src="/logos/fimken-mark-256.png" alt="" width="96" height="96">
+      <div class="loading-bar" id="loading-bar" role="progressbar" aria-label="Loading progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+      <p id="loading-text">Preparing the scene…</p>
+    </div>
     <div id="render-error" class="render-error" role="alert" hidden></div>
   </main>
+  <dialog id="help-modal" aria-labelledby="help-title">
+    <div class="modal-head"><h2 id="help-title">Shortcuts and gestures</h2><button id="close-help" class="icon-button" aria-label="Close shortcuts">${icon('close')}</button></div>
+    <h3>Keyboard</h3>
+    <dl class="shortcut-list">
+      <div><dt><kbd>Space</kbd></dt><dd>Play or pause</dd></div>
+      <div><dt><kbd>F</kbd></dt><dd>Fullscreen</dd></div>
+      <div><dt><kbd>S</kbd></dt><dd>Open or close settings</dd></div>
+      <div><dt><kbd>P</kbd></dt><dd>Performance readout</dd></div>
+      <div><dt><kbd>T</kbd></dt><dd>Poses on twos (12 fps body)</dd></div>
+      <div><dt><kbd>?</kbd></dt><dd>This list</dd></div>
+      <div><dt><kbd>Esc</kbd></dt><dd>Close a panel</dd></div>
+    </dl>
+    <h3>Mouse</h3>
+    <dl class="shortcut-list"><div><dt>Drag</dt><dd>Orbit the camera</dd></div><div><dt>Scroll</dt><dd>Zoom in and out</dd></div></dl>
+    <h3>Touch</h3>
+    <dl class="shortcut-list"><div><dt>One finger</dt><dd>Orbit the camera</dd></div><div><dt>Pinch</dt><dd>Zoom in and out</dd></div></dl>
+  </dialog>
   <dialog id="settings-modal" aria-labelledby="settings-title">
     <div class="modal-head"><h2 id="settings-title">Settings</h2><button id="close-settings" class="icon-button" aria-label="Close settings">${icon('close')}</button></div>
     <div class="modal-toolbar"><button id="motion" class="playback-button" aria-label="Pause animation">${icon('pause')}<span>Pause</span></button><div class="toolbar-right"><span id="source-label" class="live-status">AMBIENT</span><button id="fullscreen" class="icon-button" aria-label="Enter fullscreen" title="Fullscreen">${icon('expand')}</button></div></div>
@@ -77,25 +128,84 @@ document.querySelector('#app').innerHTML = `
       <p class="helper">For PC audio, choose Entire screen and enable system audio in the browser picker.</p>
     </div></details>
     <details class="settings-disclosure settings-about"><summary>About & credits</summary><p id="asset-status" class="helper"></p><p class="helper">Character: user-supplied Meshy model.<br>Animation: Quaternius · CC0.<br>Studio Small 09: Sergej Majboroda / Poly Haven · CC0.<br>Lunar maps: NASA Scientific Visualization Studio / LRO, via MoonExplorer.<br>First Light: original score.</p></details>
-    <div class="modal-foot">Audio stays on your device.<span class="shortcuts">Space · play / pause &nbsp; F · fullscreen</span></div>
+    <div class="modal-foot">Audio stays on your device.<span class="shortcuts">Space · play / pause &nbsp; F · fullscreen &nbsp; ? · all shortcuts</span></div>
   </dialog>
 `;
 
 const audio = new AudioEngine();
+
+// Something went wrong: say so plainly, offer a retry and keep the technical text one click away.
+function showFailure(detail) {
+  const box = $('#render-error');
+  box.hidden = false;
+  box.innerHTML = '<h2>Something went wrong</h2><p>Fimken could not finish loading. This is usually a dropped connection or a graphics driver hiccup, and trying again often fixes it.</p><button class="fatal-button" id="retry">Try again</button><details><summary>Error details</summary><pre></pre></details>';
+  box.querySelector('pre').textContent = String(detail);
+  box.querySelector('#retry').addEventListener('click', () => location.reload());
+  box.querySelector('#retry').focus({ preventScroll: true });
+  finishLoading(true);
+}
+
+// Real loading progress. The hero GLB is most of the download and the character loader gives
+// callers no progress callback, so its fetch is observed here (bytes counted as they stream in).
+const loadState = { loaded: 0, total: 0 };
+function setProgress(fraction, text) {
+  const percent = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
+  const bar = $('#loading-bar');
+  if (!bar) return;
+  bar.setAttribute('aria-valuenow', String(percent));
+  bar.firstElementChild.style.transform = `scaleX(${percent / 100})`;
+  if (text) $('#loading-text').textContent = text;
+}
+function watchAssetDownload() {
+  if (!CHARACTER.url || !window.fetch || !window.TransformStream) return () => {};
+  const original = window.fetch, target = new URL(CHARACTER.url, location.href).href;
+  window.fetch = function (input, init) {
+    const url = input instanceof Request ? input.url : new URL(String(input), location.href).href;
+    const request = original.call(this, input, init);
+    if (url !== target) return request;
+    window.fetch = original;
+    return request.then(response => {
+      if (!response.body) return response;
+      loadState.total = Number(response.headers.get('content-length')) || 30e6;
+      const counted = response.body.pipeThrough(new TransformStream({ transform(chunk, controller) {
+        loadState.loaded += chunk.byteLength;
+        const mb = value => (value / 1048576).toFixed(0);
+        setProgress(Math.min(.92, loadState.loaded / loadState.total * .92), `Loading the hero · ${mb(loadState.loaded)} of ${mb(Math.max(loadState.total, loadState.loaded))} MB`);
+        controller.enqueue(chunk);
+      } }));
+      return new Response(counted, { status: response.status, statusText: response.statusText, headers: response.headers });
+    });
+  };
+  return () => { if (window.fetch !== original) window.fetch = original; };
+}
+let onLoaded = () => {};
+function finishLoading(failed = false) {
+  const screen = $('#loading');
+  if (!screen || screen.classList.contains('done')) return;
+  if (!failed) setProgress(1, 'Ready');
+  screen.classList.add('done');
+  const hide = () => { screen.hidden = true; if (!failed) onLoaded(); };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) hide(); else setTimeout(hide, 550);
+}
+
 let scene;
+const restoreFetch = watchAssetDownload();
 try {
   scene = new TrainingScene($('#battle'), audio);
-  scene.onerror = message => { $('#render-error').hidden = false; $('#render-error').textContent = message; };
-  scene.ready.finally(() => { $('#loading').hidden = true; });
+  scene.onerror = message => showFailure(message);
+  scene.ready.then(() => { if ($('#render-error').hidden) finishLoading(); }, error => showFailure(error?.stack || error)).finally(restoreFetch);
   // Development-only handle for scripted motion review; absent from production builds.
   if (import.meta.env.DEV) window.__fimken = scene;
 } catch (error) {
-  $('#render-error').hidden = false;
-  $('#render-error').textContent = 'This scene needs WebGL 2. Try desktop Chrome or Edge with hardware acceleration enabled.';
+  restoreFetch();
   console.error('3D scene initialization failed:', error);
-  $('#loading').hidden = true;
+  showFailure(error?.stack || error?.message || error);
 }
 const dialog = $('#settings-modal');
+const helpDialog = $('#help-modal');
+$('#help').addEventListener('click', () => { if (!helpDialog.open) helpDialog.showModal(); });
+$('#close-help').addEventListener('click', () => helpDialog.close());
+helpDialog.addEventListener('click', event => { if (event.target === helpDialog) helpDialog.close(); });
 if(CHARACTER.id!=='meshy-hero'){
   $('.showcase-actions').innerHTML='<button class="secondary" data-practice="martial">Practice strikes</button><button class="secondary" data-practice="powerup">Power up</button><button class="secondary" data-practice="blast">Energy blast</button>';
   $('#hero-pose').closest('label').hidden=true;$('#show-pose').hidden=true;
@@ -289,9 +399,12 @@ for (const button of document.querySelectorAll('[data-practice]')) button.addEve
   dialog.close();
 });
 
+let restoringPreferences = false, qualityChosen = false;
+try { qualityChosen = ['low', 'balanced', 'high'].includes(JSON.parse(localStorage.getItem(storageKey) || '{}').quality); } catch { /* Storage may be unavailable. */ }
+$('#quality').addEventListener('change', event => { if (!restoringPreferences) { qualityChosen = true; setQualityNote(); } });
 function savePreferences() {
   const ids = ['sensitivity', 'effects', 'impactStrength', 'exaggeration', 'view', 'lens', 'environment', 'quality', 'routine', 'physics', 'auto-camera', 'motion-blur'];
-  const values = Object.fromEntries(ids.map(id => [id, $(`#${id}`).type === 'checkbox' ? $(`#${id}`).checked : $(`#${id}`).value]));
+  const values = Object.fromEntries(ids.filter(id => id !== 'quality' || qualityChosen).map(id => [id, $(`#${id}`).type === 'checkbox' ? $(`#${id}`).checked : $(`#${id}`).value]));
   try { localStorage.setItem(storageKey, JSON.stringify(values)); } catch { /* Storage may be unavailable. */ }
 }
 dialog.addEventListener('change', savePreferences);
@@ -317,11 +430,13 @@ async function restorePreferences() {
   if (!scene.paused && typeof saved['auto-camera'] === 'boolean') { $('#auto-camera').checked = saved['auto-camera']; scene.autoCamera = saved['auto-camera']; }
 
 }
-restorePreferences();
+restoringPreferences = true; restorePreferences(); restoringPreferences = false;
 // Keep option text out of nested labels' accessible names.
 for (const [id, label] of Object.entries({ view: 'Camera view', environment: 'Environment', quality: 'Render quality', routine: 'Training routine' })) $(`#${id}`).setAttribute('aria-label', label);
 window.addEventListener('keydown', event => {
+  if (event.key === '?' && !event.ctrlKey && !event.metaKey && !event.altKey && !/INPUT|SELECT|TEXTAREA/.test(event.target.tagName)) { event.preventDefault(); if (!helpDialog.open) { dialog.close(); helpDialog.showModal(); } return; }
   if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || /INPUT|SELECT|TEXTAREA|BUTTON/.test(event.target.tagName)) return;
+  if (helpDialog.open) return;
   if (event.code === 'KeyS') { event.preventDefault(); dialog.open ? dialog.close() : openSettings(); }
   if (dialog.open) return;
   if (event.code === 'Space') { event.preventDefault(); $('#motion').click(); }
@@ -360,3 +475,66 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   $('#source-status').textContent='Connect PC audio, your microphone or a music file.';
   scene?.ready.then(()=>{if(scene.isShowcase&&!scene.inspection&&!scene.reducedMotion)scene.practice('freestyle');});
 }
+
+// Automatic render quality. The first visit starts from what the device can do; the choice is
+// stored only once the user picks one themselves. The resolution governor adapts either way.
+const qualityNote = document.createElement('p');
+qualityNote.id = 'quality-note'; qualityNote.className = 'helper quality-note';
+$('#quality').closest('label').after(qualityNote);
+let autoReason = '';
+function deviceReason() {
+  if (caps.software) return 'software rendering';
+  if (caps.touch) return 'a touch device';
+  if (caps.gpuClass === 'integrated') return 'integrated graphics';
+  if (caps.recommendedQuality === 'low') return 'a modest processor';
+  return 'dedicated graphics';
+}
+function setQualityNote() {
+  const current = $('#quality').value, label = QUALITY_LABELS[current] || current;
+  qualityNote.textContent = qualityChosen ? `${label}. Your choice is saved.` : `${label}, chosen automatically for ${autoReason || deviceReason()}. Change it any time.`;
+  qualityNote.dataset.preset = current; qualityNote.dataset.auto = String(!qualityChosen);
+}
+if (scene && !qualityChosen) {
+  $('#quality').value = caps.recommendedQuality;
+  scene.setQuality(caps.recommendedQuality);
+}
+setQualityNote();
+// If frames stay slow even at the governor's floor, step down once (never over a saved choice).
+if (scene && !debugUI) scene.performance.onsustainedlow = () => {
+  if (qualityChosen || scene.comparisonSaved || scene.paused) return false;
+  const next = { high: 'balanced', balanced: 'low' }[$('#quality').value];
+  if (!next) return false;
+  $('#quality').value = next; scene.setQuality(next); autoReason = 'slow frames on this device'; setQualityNote();
+  return true;
+};
+
+// First-run hint, pointing at the sound chip. Gone after the first interaction, never shown again.
+const hintKey = 'fimken.v1.hint-seen';
+const hint = $('#first-run-hint');
+function hintSeen() { try { return localStorage.getItem(hintKey) === '1'; } catch { return false; } }
+function dismissHint() {
+  if (hint.hidden) return;
+  hint.hidden = true;
+  try { localStorage.setItem(hintKey, '1'); } catch { /* Storage may be unavailable. */ }
+  for (const type of ['pointerdown', 'keydown']) window.removeEventListener(type, dismissHint, true);
+}
+function placeHint() {
+  const chip = $('#sound-chip');
+  if (!chip || hint.hidden) return;
+  const box = chip.getBoundingClientRect(), width = hint.offsetWidth, centre = box.left + box.width / 2;
+  const left = Math.min(Math.max(8 + width / 2, centre), innerWidth - 8 - width / 2);
+  hint.style.top = `${box.bottom + 12}px`;
+  hint.style.left = `${left}px`;
+  hint.style.setProperty('--arrow', `${centre - (left - width / 2)}px`);
+}
+onLoaded = () => {
+  if (hintSeen() || !$('#sound-chip') || audio.mode !== 'idle') return;
+  hint.hidden = false; placeHint();
+  for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, dismissHint, true);
+};
+window.addEventListener('resize', placeHint);
+const syncAudioMode = audio.onchange;
+audio.onchange = () => { syncAudioMode?.(); if (audio.mode !== 'idle') dismissHint(); };
+}
+
+if (!caps.supported) showUnsupported(caps); else boot();

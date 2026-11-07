@@ -2,7 +2,7 @@
 // joint angles are radians. IK, follow-through, cue dispatch and VFX remain separate.
 import { createSmashMoves } from './smash-moves.js';
 import { createSignatureMoves } from './signature-moves.js';
-import { createMocapMoves } from './mocap-moves.js';
+import { setMocapContext } from './mocap-moves.js';
 export function createStagedMoves({stance,guard,pivot,chamber,kick}) {
  const pose=(base,changes={})=>({...base,...changes});
  // Keys without a phase are grounded guard work, or floating once the pose lifts off.
@@ -46,6 +46,7 @@ export function createStagedMoves({stance,guard,pivot,chamber,kick}) {
  for(let i=0;i<8;i++){const side=i%2?p2:p1;barrageKeys.push(K(bt,side,{twist:(i%2?.2:-.16)}),K(bt+.035,side,{twist:(i%2?.2:-.16)}));bt+=.17;}
  barrageKeys.push(K(bt+.1,heavyLoad,{}),K(bt+.32,heavyHit,{}),K(bt+.37,heavyHit,{}),K(bt+.6,guard,{}),K(bt+1.1,guard,{}));
  const barrageCues=[...Array.from({length:8},(_,i)=>({at:+(.3+i*.17).toFixed(2),type:'impact',limb:i%2?'rightHand':'leftHand',strength:.3+i*.04})),{at:+(bt+.32).toFixed(2),type:'impact',limb:'rightHand',strength:.95}];
+ setMocapContext({K,move,poses:{guard}});
  const extra={
   // 8 Stance switch: weight through the hips, rear foot slides, front foot pivots, torso follows.
   stanceShift:move('Stance switch',[K(0,guard,{}),K(.22,guard,{hipShift:[-.05,0],crouch:.14,leftFoot:[0,0,.05],rightFoot:[0,0,-.05]},'guard','Shift weight through the hips'),
@@ -108,7 +109,7 @@ export function createStagedMoves({stance,guard,pivot,chamber,kick}) {
   ...extra,
   ...createSmashMoves({K,move,poses:{guard,air,heavyLoad,heavyHit,loaded}}),
   ...createSignatureMoves({K,move,poses:{guard,loaded,dominant,upper,p1,p2,dash}}),
-  ...createMocapMoves({K,move,poses:{guard}}),
+  // Captured moves register later through loadMocapLibrary (lazy, about 2 MB).
   powerup:move('Power-up',[
    K(0,stance,{},'powerup','Begin planted','powerBuild'),K(.5,loaded,{power:.30},'powerup','Widen feet, bend knees, draw hands to hips','powerBuild'),
    K(1.5,loaded,{lean:-.025,headPitch:.26,power:.6,tension:1},'powerup','Retract elbows, lift chest, lower head','powerPeak'),

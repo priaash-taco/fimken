@@ -139,7 +139,8 @@ export class CharacterController {
     // whatever ARKit-named blendshapes the model has (this hero: procedural keys; a VRM: its own).
     if(this.showcasePose){
       this.face??=new FacePerformance(this.model);
-      if(!this.face.enabledOverride)this.face.update(dt,this.livePose||this.showcasePose,music,time);
+      const facePose=this.livePose||this.showcasePose;if(this.poseVel&&facePose!==this.showcasePose)facePose.poseVelYaw=this.poseVel.yaw||0;
+      if(!this.face.enabledOverride)this.face.update(dt,facePose,music,time);
     }
     this.root.updateMatrixWorld(true);
   }

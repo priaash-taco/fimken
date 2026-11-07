@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ShowcaseDirector, SHOWCASE_MOVES, inertial, BLEND_TIME } from '../src/engine/showcase-director.js';
 import { FreestyleDirector } from '../src/engine/freestyle-director.js';
+import { loadMocapLibrary } from '../src/engine/mocap-moves.js';
+await loadMocapLibrary();
 
 test('inertial curve starts at the offset with the carried velocity, decays to zero and never reverses sign', () => {
   const c = inertial(.5, 3, .35);

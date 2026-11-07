@@ -1,0 +1,46 @@
+{
+ "eyes": {
+  "L": {
+   "center": [
+    0.037,
+    -0.1357,
+    1.859
+   ]
+  },
+  "R": {
+   "center": [
+    -0.035,
+    -0.1334,
+    1.859
+   ]
+  }
+ },
+ "objects": [
+  "Eyeball.L",
+  "Lid.upper.L",
+  "Lid.lower.L",
+  "Eyeball.R",
+  "Lid.upper.R",
+  "Lid.lower.R"
+ ],
+ "body_keys": [
+  "Basis",
+  "focus",
+  "shout",
+  "eyeSquintLeft",
+  "eyeSquintRight",
+  "browDownLeft",
+  "browDownRight",
+  "browInnerUp",
+  "browOuterUpLeft",
+  "browOuterUpRight",
+  "jawOpen",
+  "mouthSmileLeft",
+  "mouthSmileRight",
+  "mouthFrownLeft",
+  "mouthFrownRight",
+  "mouthPucker",
+  "cheekPuffLeft",
+  "cheekPuffRight"
+ ]
+}

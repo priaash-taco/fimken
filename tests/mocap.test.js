@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { SHOWCASE_MOVES } from '../src/engine/showcase-director.js';
+import { loadMocapLibrary } from '../src/engine/mocap-moves.js';
+await loadMocapLibrary();
 const data = JSON.parse(readFileSync(new URL('../src/engine/mocap/clips.json', import.meta.url), 'utf8'));
 const finite = v => (Array.isArray(v) ? v.every(finite) : Number.isFinite(v));
 test('converted capture clips are well formed and registered as moves', () => {

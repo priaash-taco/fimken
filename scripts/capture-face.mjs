@@ -15,7 +15,8 @@ console.log('morph targets', names.length, names.join(' '));
 for (const combo of keys) {
   const png = await page.evaluate(({ combo }) => new Promise(done => { const s = window.__fimken, V = s.camera.position.constructor; let n = 0;
     const tick = () => { const head = s.actor.anchor('head', new V()); s.controls.target.copy(head); s.camera.position.set(head.x + .18, head.y + .04, head.z + .62); s.controls.update();
-      if (combo !== 'live') { s.actor.face.enabledOverride = true; for (const o of s.actor.face.targets) { for (const [k, i] of Object.entries(o.morphTargetDictionary)) o.morphTargetInfluences[i] = combo.split('+').includes(k) ? 1 : 0; } }
+      s.actor.face.enabledOverride = combo !== 'live';
+      if (combo !== 'live') { for (const o of s.actor.face.targets) { for (const [k, i] of Object.entries(o.morphTargetDictionary)) o.morphTargetInfluences[i] = combo.split('+').includes(k) ? 1 : 0; } }
       if (++n >= 12) done(s.canvas.toDataURL('image/png')); else requestAnimationFrame(tick); }; requestAnimationFrame(tick); }), { combo });
   writeFileSync(`${out}/${combo.replace(/\+/g, '_')}.png`, Buffer.from(png.split(',')[1], 'base64')); console.log(combo);
 }

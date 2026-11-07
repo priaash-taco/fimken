@@ -12,7 +12,10 @@
     "asset:import": "node scripts/import-character.mjs",
     "meshy:plan": "node scripts/meshy-draft.mjs plan",
     "hero:plan": "node scripts/meshy-hero.mjs plan",
-    "hero:check": "node scripts/meshy-hero.mjs check"
+    "hero:check": "node scripts/meshy-hero.mjs check",
+    "release:prune": "node scripts/release-prune.mjs",
+    "release:check": "node scripts/release-check.mjs",
+    "release": "vite build && node scripts/release-prune.mjs && node scripts/release-check.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

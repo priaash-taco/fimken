@@ -1,0 +1,49 @@
+{
+ "rest": {
+  "left": 0.14784335006787497,
+  "right": 0.1478448901630508,
+  "rootY": 0.0010395520372197637
+ },
+ "rows": [
+  {
+   "id": "heavy",
+   "frames": 103,
+   "nan": 0,
+   "nanWhere": "",
+   "footMin": -0.000765827191471169,
+   "outside": 0,
+   "maxAbs": 0.18006351008541263,
+   "maxJump": 0.0413683059447636,
+   "wall": 1.7965,
+   "finished": true,
+   "duration": 1.8,
+   "lens": "classic",
+   "pageErrors": 0
+  },
+  {
+   "id": "mocap_dummy",
+   "frames": 2253,
+   "nan": 0,
+   "nanWhere": "",
+   "footMin": -0.00007855834302339382,
+   "outside": 0,
+   "maxAbs": 0.1800365671055843,
+   "maxJump": 0.000045953146347369626,
+   "wall": 90.204,
+   "finished": false,
+   "lens": "classic",
+   "pageErrors": 0
+  }
+ ],
+ "failures": [
+  {
+   "lens": "classic",
+   "id": "mocap_dummy",
+   "why": "did not finish"
+  }
+ ],
+ "errors": {
+  "page": [],
+  "console": []
+ }
+}

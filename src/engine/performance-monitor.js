@@ -37,7 +37,21 @@ export class PerformanceMonitor {
     s.calls = info.calls; s.triangles = info.triangles; s.points = info.points; s.lines = info.lines;
     if (wallDt > 0 && wallDt < 1) { this.intervals[this.index] = wallDt * 1000; this.index = (this.index + 1) % SAMPLES; this.count = Math.min(SAMPLES, this.count + 1); }
     this.refreshAge += wallDt;
+    this.watchSlow(wallDt);
     if (this.visible && this.refreshAge > .25) { this.refreshAge = 0; this.element.textContent = this.describe(); }
+  }
+  // Sustained slowness: once per second the average frame time is checked; when the resolution
+  // governor has had its chance and frames are still under ~25 fps for 8 seconds in a row,
+  // onsustainedlow() is offered the chance to lower the quality preset. Hidden tabs and the
+  // first seconds after load (shader compiles) are ignored.
+  watchSlow(wallDt) {
+    if (document.hidden || !(wallDt > 0 && wallDt < 1)) { this.slowAge = 0; this.slowFrames = 0; return; }
+    this.slowAge = (this.slowAge || 0) + wallDt; this.slowFrames = (this.slowFrames || 0) + 1; this.sinceStart = (this.sinceStart || 0) + wallDt;
+    if (this.slowAge < 1) return;
+    const slow = this.slowAge / this.slowFrames > 1 / 25 && this.sinceStart > 6;
+    this.slowAge = 0; this.slowFrames = 0;
+    this.slowSeconds = slow ? (this.slowSeconds || 0) + 1 : 0;
+    if (this.slowSeconds >= 8) { this.slowSeconds = -8; this.onsustainedlow?.(this.snapshot().fps); }
   }
   // Pacing over the last 120 frames (about two seconds at 60 fps).
   snapshot() {

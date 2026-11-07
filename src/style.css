@@ -225,3 +225,104 @@ input[type=range],input[type=checkbox] { accent-color:var(--palette-villain-viol
 
 .performance-overlay { position:absolute; top:74px; right:18px; z-index:5; margin:0; padding:9px 12px; border:1px solid #ffffff22; border-radius:8px; background:#0b0a14cc; color:var(--palette-energy-white,#f4f1ff); font:11px/1.55 ui-monospace,Consolas,monospace; pointer-events:none; white-space:pre; }
 .performance-overlay[hidden] { display:none; }
+
+/* ---- Product shell: loading, failure, hint, help, touch, safe areas ---- */
+:root { --muted: #a99cbb; }
+.helper { color: #a394b3; }
+#settings-modal .shortcuts { color: #a38db7; }
+.toggle-row small { color: #a091ac; }
+.modal-foot { color: #a38db7; }
+.helper strong { color: #cfc0de; }
+
+.loading-screen { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: radial-gradient(ellipse at 50% 42%, #1b1030 0%, #090514 70%); transition: opacity .5s ease; }
+.loading-screen.done { opacity: 0; pointer-events: none; }
+.loading-mark { width: 96px; height: 96px; filter: drop-shadow(0 0 22px #33a8f255); animation: mark-breathe 2.4s ease-in-out infinite; }
+.loading-bar { width: min(280px, 64vw); height: 4px; border-radius: 4px; background: #ffffff1a; overflow: hidden; }
+.loading-bar i { display: block; height: 100%; width: 100%; transform: scaleX(0); transform-origin: left; border-radius: 4px; background: linear-gradient(90deg, var(--palette-frieza-purple, #9b6cf0), var(--palette-kamehameha-cyan, #5fd4ff)); transition: transform .25s ease-out; }
+#loading-text { margin: 0; min-height: 1.4em; font-size: 12px; letter-spacing: .4px; color: #b9aecb; text-align: center; padding: 0 20px; }
+@keyframes mark-breathe { 50% { transform: scale(1.05); opacity: .85; } }
+
+.render-error { z-index: 12; text-align: center; width: min(88%, 460px); padding: 28px 26px; border-color: #b987a6; background: #1d1229f2; box-shadow: 0 30px 100px #000a; }
+.render-error h2 { margin: 0 0 10px; font-size: 22px; font-weight: 550; letter-spacing: -.5px; }
+.render-error p { margin: 0 0 18px; font-size: 13px; line-height: 1.65; color: #d4c8e3; }
+.render-error details { margin-top: 18px; text-align: left; font-size: 12px; color: #b9aecb; }
+.render-error summary, .fatal-card summary { cursor: pointer; padding: 6px 0; min-height: 28px; }
+.render-error pre, .fatal-card pre { margin: 8px 0 0; padding: 12px; max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.6 Consolas, monospace; color: #cfc6dc; background: #090711; border-radius: 8px; }
+.fatal-button { min-height: 44px; padding: 10px 26px; border: 0; border-radius: 10px; background: #e1d7f6; color: #231438; font-size: 13px; font-weight: 600; }
+.fatal-button:hover { background: #f5edff; }
+.fatal-page { min-height: 100dvh; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 30%, #1b1030 0%, #090514 70%); overflow: auto; }
+.fatal-card { width: min(520px, 100%); padding: 32px 28px; border: 1px solid #a68cb72a; border-radius: 17px; background: #171021f5; box-shadow: 0 35px 140px #000a; line-height: 1.65; font-size: 14px; color: #e4dcf0; }
+.fatal-card h1 { margin: 14px 0 12px; font-size: 24px; font-weight: 550; letter-spacing: -.6px; }
+.fatal-card h2 { margin: 20px 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #bcaacf; }
+.fatal-card ul { margin: 0 0 14px; padding-left: 20px; }
+.fatal-card .fatal-help { color: #b9aecb; font-size: 13px; }
+.fatal-card details { margin-top: 18px; font-size: 12px; color: #b9aecb; }
+.fatal-mark { filter: drop-shadow(0 0 18px #33a8f255); }
+body:has(.fatal-page) { overflow: auto; }
+
+.first-run-hint { position: absolute; z-index: 6; transform: translateX(-50%); padding: 9px 14px; border-radius: 10px; background: #e1d7f6; color: #231438; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; box-shadow: 0 10px 34px #0008; animation: hint-in .4s ease both; }
+.first-run-hint::before { content: ''; position: absolute; top: -6px; left: var(--arrow, 50%); width: 12px; height: 12px; margin-left: -6px; background: inherit; transform: rotate(45deg); border-radius: 2px; }
+@keyframes hint-in { from { opacity: 0; margin-top: -6px; } }
+
+.top-actions { display: flex; align-items: center; pointer-events: auto; }
+.help-button { font-size: 17px; font-weight: 600; border-color: #ffffff22; }
+kbd { display: inline-block; min-width: 26px; padding: 3px 8px; text-align: center; font: 12px/1.4 ui-monospace, Consolas, monospace; color: #f0eaf8; background: #ffffff10; border: 1px solid #ffffff26; border-radius: 6px; }
+#help-modal h3 { margin: 18px 0 8px; font-size: 12px; color: #d3c7e2; }
+.shortcut-list { margin: 0; }
+.shortcut-list > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.shortcut-list dt { color: #f0eaf8; }
+.shortcut-list dd { margin: 0; color: #b9aecb; text-align: right; }
+#help-modal { width: min(420px, calc(100% - 28px)); padding: 24px; }
+#help-modal .modal-head { margin-bottom: 4px; }
+#help-modal .modal-head h2 { font-size: 22px; margin: 0; font-weight: 550; }
+
+.quality-note { margin: -8px 0 12px; }
+
+/* Safe areas (notches, home indicator) */
+.topbar { padding-top: max(30px, calc(env(safe-area-inset-top) + 12px)); padding-left: max(42px, env(safe-area-inset-left)); padding-right: max(42px, env(safe-area-inset-right)); }
+.action-dock { bottom: max(24px, calc(env(safe-area-inset-bottom) + 10px)); }
+.performance-overlay { top: max(74px, calc(env(safe-area-inset-top) + 64px)); right: max(18px, env(safe-area-inset-right)); }
+
+/* Phones: no overlap in the top bar, comfortable touch targets */
+@media (max-width: 600px) {
+  .topbar { padding-top: max(14px, calc(env(safe-area-inset-top) + 8px)); padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); gap: 8px; align-items: flex-start; }
+  .identity { gap: 6px; flex-wrap: wrap; row-gap: 8px; min-width: 0; }
+  .divider { display: none; }
+  .sound-chip { margin-left: 0; }
+  .action-dock { bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
+  .first-run-hint { font-size: 12px; }
+}
+@media (pointer: coarse), (max-width: 600px) {
+  .icon-button { width: 44px; height: 44px; }
+  .sound-chip { min-height: 44px; padding: 8px 16px; font-size: 13px; }
+  .secondary, .text-button, .source-button, .playback-button, .fatal-button { min-height: 44px; }
+  .text-button { display: inline-flex; align-items: center; }
+  .action-dock .secondary, .action-dock .playback-button, .action-dock .move-picker { min-height: 44px; }
+  #settings-modal .training-actions button { min-height: 44px; }
+  .settings-disclosure summary { min-height: 44px; }
+  select, #settings-modal select { min-height: 44px; font-size: 16px; padding: 8px 10px; max-width: 64%; }
+  #settings-modal .settings-section .toggle-row, #settings-modal .essential-display .toggle-row { min-height: 44px; margin: 4px 0; }
+  .toggle-row input { width: 24px; height: 24px; }
+  .range-label { font-size: 13px; }
+  .select-label { font-size: 13px; }
+  #settings-modal input[type=range] { height: 44px; margin: 0 0 4px; padding: 0; background: transparent; touch-action: pan-y; }
+  #settings-modal .range-label { margin: 10px 0 0; }
+  .shortcut-list > div { padding: 12px 0; }
+  .helper, #source-status, .toggle-row small { font-size: 12px; }
+  #help-modal .shortcuts, .modal-foot .shortcuts { display: none; }
+}
+@media (max-width: 600px) {
+  dialog { max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overscroll-behavior: contain; }
+  #settings-modal, #help-modal { padding: 18px; }
+  .audio-grid .source-button { min-height: 72px; }
+}
+html, body { overscroll-behavior: none; }
+body { -webkit-text-size-adjust: 100%; }
+.sound-chip:focus-visible, .help-button:focus-visible { outline: 2px solid #c0adff; outline-offset: 3px; }
+summary:focus-visible, input[type=range]:focus-visible { outline-offset: 3px; }
+
+/* Calm the UI for people who ask for less motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  .loading-mark { animation: none; }
+}

@@ -1,14 +1,20 @@
 {
-  "sha256": "fd54bf758af037dd349b0d714fa3d2f836e4f3aef3049f4f7185eea884777e56",
-  "bytes": 30556164,
-  "vertices": 114759,
-  "triangles": 179999,
+  "sha256": "acf1bc9752eaf20c37cc6abd05d5ee43c5399a82344fbd0ec762f870d919540a",
+  "bytes": 30840168,
+  "vertices": 118259,
+  "triangles": 186751,
   "skins": 1,
-  "skinnedPrimitives": 1,
+  "skinnedPrimitives": 7,
   "materials": [
+    "Eyeball L",
+    "Eyeball R",
+    "Eyelid skin.001",
+    "Eyelid skin.003",
+    "Eyelid skin",
+    "Eyelid skin.002",
     "Meshy authored 4K PBR"
   ],
-  "embeddedImages": 3,
+  "embeddedImages": 5,
   "animations": [],
   "bones": [
     "hips",
@@ -16,6 +22,8 @@
     "chest",
     "neck",
     "head",
+    "eye.L",
+    "eye.R",
     "shoulder.L",
     "upperarm.L",
     "forearm.L",
@@ -65,6 +73,7 @@
   ],
   "errors": [],
   "warnings": [
+    "A mesh primitive has no primary UV set.",
     "No animation clips; acceptable for staging, not for runtime promotion."
   ],
   "visualQuality": "Not established by structural validation. Requires neutral-light and deformation review.",

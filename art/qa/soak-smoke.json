@@ -1,0 +1,128 @@
+{
+ "report": {
+  "minutes": 0.5,
+  "samples": 5,
+  "fps": {
+   "min": 48.95761084668392,
+   "p05": 48.95761084668392,
+   "median": 52.791342061514186,
+   "max": 55.87632701252196
+  },
+  "slopePerMinuteSecondHalf": {
+   "heap": 58641660,
+   "geometries": 12,
+   "textures": 0,
+   "programs": 0,
+   "children": 0,
+   "objects": 0
+  },
+  "first": {
+   "fps": 48.95761084668392,
+   "frameMs": 20.42583334247271,
+   "origin": 1794089656378.9,
+   "heap": 125335452,
+   "geometries": 34,
+   "textures": 32,
+   "programs": 61,
+   "children": 95,
+   "objects": 166,
+   "move": "blast",
+   "scale": "0.81",
+   "t": 5
+  },
+  "last": {
+   "fps": 55.87632701252196,
+   "frameMs": 17.89666668275992,
+   "origin": 1794089656378.9,
+   "heap": 138469933,
+   "geometries": 59,
+   "textures": 32,
+   "programs": 77,
+   "children": 95,
+   "objects": 166,
+   "move": "airCombo",
+   "scale": "0.66",
+   "t": 30
+  },
+  "moves": 3,
+  "reloads": 0,
+  "pageErrors": 1,
+  "consoleErrors": 1,
+  "errorSamples": [
+   "Failed to fetch dynamically imported module: http://127.0.0.1:5313/src/engine/mocap/clips.json?import",
+   "Failed to load module script: Expected a JSON module script but the server responded with a MIME type of \"text/javascript\". Strict MIME type checking is enforced for module scripts per HTML spec."
+  ]
+ },
+ "samples": [
+  {
+   "fps": 48.95761084668392,
+   "frameMs": 20.42583334247271,
+   "origin": 1794089656378.9,
+   "heap": 125335452,
+   "geometries": 34,
+   "textures": 32,
+   "programs": 61,
+   "children": 95,
+   "objects": 166,
+   "move": "blast",
+   "scale": "0.81",
+   "t": 5
+  },
+  {
+   "fps": 52.791342061514186,
+   "frameMs": 18.942500056823096,
+   "origin": 1794089656378.9,
+   "heap": 134975060,
+   "geometries": 48,
+   "textures": 32,
+   "programs": 71,
+   "children": 95,
+   "objects": 166,
+   "move": "blast",
+   "scale": "0.77",
+   "t": 15
+  },
+  {
+   "fps": 52.65005241212758,
+   "frameMs": 18.99333341916402,
+   "origin": 1794089656378.9,
+   "heap": 128696323,
+   "geometries": 57,
+   "textures": 32,
+   "programs": 77,
+   "children": 95,
+   "objects": 166,
+   "move": "heavyKick",
+   "scale": "0.70",
+   "t": 20
+  },
+  {
+   "fps": 53.116147156313104,
+   "frameMs": 18.82666672070821,
+   "origin": 1794089656378.9,
+   "heap": 127046767,
+   "geometries": 58,
+   "textures": 32,
+   "programs": 77,
+   "children": 95,
+   "objects": 166,
+   "move": "heavyKick",
+   "scale": "0.70",
+   "t": 25
+  },
+  {
+   "fps": 55.87632701252196,
+   "frameMs": 17.89666668275992,
+   "origin": 1794089656378.9,
+   "heap": 138469933,
+   "geometries": 59,
+   "textures": 32,
+   "programs": 77,
+   "children": 95,
+   "objects": 166,
+   "move": "airCombo",
+   "scale": "0.66",
+   "t": 30
+  }
+ ]
+}
