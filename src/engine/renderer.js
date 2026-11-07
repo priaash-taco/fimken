@@ -168,7 +168,7 @@ export class CinematicRenderer {
     // Motion blur: hero velocity is drawn first; off, inspection and unready states skip the pass entirely.
     const blurOn = !this.inspection && this.motionBlur > 0 && this.hero && this.velocity.target.width > 1;
     finish.motionBlur.value = blurOn ? this.motionBlur : 0;
-    if (blurOn) { finish.reproj.value.copy(this.velocity.render(this.renderer, this.scene, this.camera, this.hero, dt)); finish.tVelocity.value = this.velocity.target.texture; } else this.velocity.invalidate();
+    if (blurOn) { this.velocity.deform = this.heroDeform; finish.reproj.value.copy(this.velocity.render(this.renderer, this.scene, this.camera, this.hero, dt)); finish.tVelocity.value = this.velocity.target.texture; } else this.velocity.invalidate();
     if (this.inspection) this.renderer.render(this.scene, this.camera);
     else this.composer.render();
     this.canvas.dataset.postprocessing = String(!this.inspection);

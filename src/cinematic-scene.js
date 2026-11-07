@@ -212,6 +212,7 @@ export class TrainingScene {
       const turn = state === 'gesture' ? Math.sin(progress * Math.PI) * .4 : state === 'punch' ? -.25 : 0;
       this.actor.root.rotation.y = THREE.MathUtils.damp(this.actor.root.rotation.y, turn + CHARACTER.facing, 4, dt);
       this.actor.showcasePose=this.isShowcase ? this.director.pose : null;
+      { const w = this.vfx.motion.wind, up = Math.max(0, (this.director.power || 0) - .4) * effects * 4; (this.actor.wind ??= { x: 0, y: 0, z: 0 }); this.actor.wind.x = w.x; this.actor.wind.z = w.z; this.actor.wind.y = up; }
       this.actor.update(dt, this.time, this.isShowcase?'idle':state, this.music);
       const contact=this.director.signals?.impact||this.director.signals?.landing;
       if(contact){this.punch=Math.max(this.punch||0,Math.min(1,contact.strength));this.shake=.012*contact.strength*this.impactStrength;this.canvas.dataset.contacts=String(Number(this.canvas.dataset.contacts||0)+1);}
@@ -257,7 +258,7 @@ export class TrainingScene {
     this.pipeline.cold = THREE.MathUtils.damp(this.pipeline.cold || 0, (this.director.signals?.beam || 0) * .75 * effects + (this.director.signals?.charge || 0) * .6 * effects, 4, Math.min(.05, wallDt));
     this.pipeline.blur = Math.min(1, (this.pipeline.speed || 0) * .9 + this.mood.levels.release * .3 * effects) * (this.reducedMotion ? 0 : 1);
     // Motion blur: moderate by default; off for reduced motion, inspection and when the user turns it off.
-    this.pipeline.motionBlur = this.motionBlurOn && !this.reducedMotion && !this.inspection && this.hasCharacter ? .35 : 0; this.pipeline.hero = this.actor.model;
+    this.pipeline.motionBlur = this.motionBlurOn && !this.reducedMotion && !this.inspection && this.hasCharacter ? .35 : 0; this.pipeline.hero = this.actor.model; this.pipeline.heroDeform = this.actor.heroFinish ? { sway: this.actor.heroFinish.sway, smear: this.actor.heroFinish.smear, regions: this.actor.secondary?.uniform } : null;
     this.vfx.camera = this.camera;
     this.pipeline.gpuMs = this.performance.stats.gpuMs;
     this.pipeline.render(wallDt, this.director.power, effects, this.time);

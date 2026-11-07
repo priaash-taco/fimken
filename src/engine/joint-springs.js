@@ -10,7 +10,7 @@ import * as THREE from 'three';
 //  SUB_STEP    integration step, same 240 Hz as motion-life.js
 //  SOFT_START  interior joint angle (deg) where the soft limit starts compressing
 //  SOFT_MAX    interior joint angle (deg) a fully straight limb is eased back to
-export const FREQ={hips:90,torso:30,head:22,shoulder:20,arm:16,leg:100};
+export const FREQ={hips:90,torso:30,head:22,shoulder:20,arm:16,leg:100,legFree:30};  // legFree: thigh and shin of a lifted foot
 export const DAMPING=.8;
 export const MAX_LAG=THREE.MathUtils.degToRad(12);
 export const SUB_STEP=1/240;
@@ -52,7 +52,7 @@ export class JointSprings{
   reset(){for(const s of this.states.values()){s.started=false;s.v.set(0,0,0);}}
   // Sides whose arm chain must stay exactly on the solved pose.
   exempt(pose){
-    const e={all:(pose.hitStop||0)>.5,left:false,right:false};
+    const e={all:(pose.hitStop||0)>.5,left:false,right:false,kick:(pose.trails?.[2]||0)>.5};
     const energy=(pose.charge||0)>.5||(pose.beam||0)>.5;
     e.left=energy||(pose.trails?.[0]||0)>.5;e.right=energy||(pose.trails?.[1]||0)>.5;
     return e;
@@ -62,11 +62,14 @@ export class JointSprings{
     const ex=this.exempt(pose),ids=Math.min(dt,.1);
     // Remember where the solve put each ankle: a lagging hip or thigh must not drag a planted foot.
     const root=this.rig.actor?.root;if(root)root.updateMatrixWorld(true);
-    const pins=LEGS.map(([u,l,e])=>{const b=this.rig.bones[e];return b&&this.rig.bones[u]&&this.rig.bones[l]?{p:b.getWorldPosition(new THREE.Vector3()),q:b.getWorldQuaternion(new THREE.Quaternion())}:null;});
+    // A foot on the floor is pinned back after the springs; a lifted foot is free, so its knee eases like an elbow.
+    const planted={left:(pose.lift||0)<.03&&(pose.leftFoot?.[1]||0)<.06,right:(pose.lift||0)<.03&&(pose.rightFoot?.[1]||0)<.06};
+    const pins=LEGS.map(([u,l,e],i)=>{const b=this.rig.bones[e],side=i?'right':'left';return b&&this.rig.bones[u]&&this.rig.bones[l]&&planted[side]?{p:b.getWorldPosition(new THREE.Vector3()),q:b.getWorldQuaternion(new THREE.Quaternion())}:null;});
     for(const [bone,s] of this.states){
       const target=bone.quaternion;
       const side=s.role.startsWith('left')?'left':s.role.startsWith('right')?'right':null;
-      const snap=!s.started||ex.all||(side&&s.group!=='leg'&&s.group!=='torso'&&s.group!=='head'&&ex[side]);
+      const snap=!s.started||ex.all||(side&&s.group!=='leg'&&s.group!=='torso'&&s.group!=='head'&&ex[side])||(s.group==='leg'&&(ex.kick||/Foot|Toes?$/.test(s.role)&&!planted[side]));
+      if(s.group==='leg'&&side)s.w=planted[side]?FREQ.leg:FREQ.legFree;
       if(snap){s.q.copy(target);s.v.set(0,0,0);s.started=true;continue;}
       const k=s.w*s.w,c=2*DAMPING*s.w;
       let t=ids;

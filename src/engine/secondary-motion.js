@@ -79,7 +79,7 @@ export class SecondaryMotion {
       + vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\n' + SELECT);
   }
   patch(shader) { shader.uniforms.regionOffset = this.uniform; shader.vertexShader = this.inject(shader.vertexShader); }
-  // bones: role -> Object3D map. wind: optional {x,z}. dt 0 leaves everything unchanged.
+  // bones: role -> Object3D map. wind: optional {x,y,z} (y is an updraft, e.g. the aura). dt 0 leaves everything unchanged.
   update(dt, bones, root, wind) {
     if (!(dt > 0) || !bones) return;
     const q = this.model.getWorldQuaternion(new THREE.Quaternion()).invert(), scale = this.model.getWorldScale(this.tmp).x || 1, k = this.reduced;
@@ -92,7 +92,7 @@ export class SecondaryMotion {
       const accel = this.accelV.copy(vel).sub(this.prevVel[i]).divideScalar(dt).clampLength(0, 80);
       this.prevPos[i].copy(this.world); this.prevVel[i].copy(vel);
       const target = vel.multiplyScalar(-r.kv).addScaledVector(accel, -r.ka);
-      target.y -= r.sag; if (wind && r.wind) { target.x += wind.x * .01 * r.wind; target.z += wind.z * .01 * r.wind; }
+      target.y -= r.sag; if (wind && r.wind) { target.x += (wind.x || 0) * .01 * r.wind; target.z += (wind.z || 0) * .01 * r.wind; target.y += (wind.y || 0) * .01 * r.wind; }
       target.multiplyScalar(k).clampLength(0, r.max * k);
       stepSpring(s, target, r.w, r.z, dt);
       s.x.clampLength(0, r.max * k * 1.15);
