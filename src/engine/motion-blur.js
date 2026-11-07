@@ -16,7 +16,7 @@ varying vec4 vCur;varying vec4 vPrev;
 vec3 deform(vec3 p,vec3 hs,float count,vec3 sp[6],vec3 sv[6],bool prev){
  p+=hs*sway;
  if(regionWeight>0.){vec3 ro=vec3(0.);for(int i=0;i<12;i++){ro+=(prev?regionOffsetPrev[i]:regionOffset[i])*step(abs(regionId-float(i)),.5);}p+=ro*regionWeight;}
- if(count>.5)for(int si=0;si<6;si++){if(float(si)>=count)break;float sl=length(sv[si]);if(sl<.0001)continue;float sw=1.0-smoothstep(0.0,.4,distance(p,sp[si]));p-=sv[si]/sl*min(sl*.012,.14)*sw*sw;}
+ if(count>.5)for(int si=0;si<6;si++){if(float(si)>=count)break;float sl=length(sv[si]);if(sl<.0001)continue;vec3 sd=sv[si]/sl;vec3 rel=p-sp[si];float back=dot(rel,-sd);float radial=length(rel+sd*back);float sw=smoothstep(.03,.22,back)*(1.0-smoothstep(.0,.45,back))*(1.0-smoothstep(.06,.2,radial));p-=sd*min(sl*.016,.16)*sw;}
  return p;}
 #include <skinning_pars_vertex>
 mat4 getPrevBone(const in float i){int size=textureSize(prevBoneTexture,0).x;int j=int(i)*4;int x=j%size;int y=j/size;

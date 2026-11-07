@@ -45,3 +45,6 @@ art/mocap/cmu/
 
 # Agent worktrees
 .claude/worktrees/
+
+# Blender face exports (re-create with art/hero/face/face_keys2.py)
+art/hero/face/*.glb

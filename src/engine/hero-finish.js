@@ -6,7 +6,7 @@ import * as THREE from 'three';
 // Anime smear: vertices near a fast limb tip trail behind its motion. Positions/velocities are in the skinned mesh's model space.
 const SMEAR_N=6;
 const smearDecl=`uniform float smearCount;uniform vec3 smearPos[${SMEAR_N}];uniform vec3 smearVel[${SMEAR_N}];`;
-const smearBody=`if(smearCount>.5)for(int si=0;si<${SMEAR_N};si++){if(float(si)>=smearCount)break;float sl=length(smearVel[si]);if(sl<.0001)continue;float sw=1.0-smoothstep(0.0,.4,distance(transformed,smearPos[si]));transformed-=smearVel[si]/sl*min(sl*.012,.14)*sw*sw;}`;
+const smearBody=`if(smearCount>.5)for(int si=0;si<${SMEAR_N};si++){if(float(si)>=smearCount)break;float sl=length(smearVel[si]);if(sl<.0001)continue;vec3 sd=smearVel[si]/sl;vec3 rel=transformed-smearPos[si];float back=dot(rel,-sd);float radial=length(rel+sd*back);float sw=smoothstep(.03,.22,back)*(1.0-smoothstep(.0,.45,back))*(1.0-smoothstep(.06,.2,radial));transformed-=sd*min(sl*.016,.16)*sw;}`;
 export class HeroFinish {
   constructor(model,secondary=null){this.secondary=secondary;
     this.enabled={value:0};this.width={value:.0022};this.inkScale={value:1};this.lensInkOn=true;this.outlines=[];this.glow={value:0};this.glowHulls=[];
@@ -44,7 +44,7 @@ export class HeroFinish {
           heroBand = mix(heroBand, 1.0, smoothstep(.67,.74,heroL));
           reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel*lensCel);`+heroLensFragment);
         };
-        material.customProgramCacheKey=()=> 'fimken-hero-lens-v4';material.needsUpdate=true;
+        material.customProgramCacheKey=()=> 'fimken-hero-lens-v5';material.needsUpdate=true;
       }
       const ink=new THREE.MeshStandardMaterial({color:PALETTE.animeBlack,emissive:'#08060d',side:THREE.BackSide,roughness:1});
       ink.onBeforeCompile=shader=>{shader.uniforms.inkWidth=this.width;shader.uniforms.inkScale=this.inkScale;addSway(shader);shader.vertexShader='uniform float inkWidth;uniform float inkScale;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','transformed += normalize(objectNormal) * inkWidth * inkScale;\n#include <project_vertex>');};

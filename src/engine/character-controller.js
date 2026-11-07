@@ -9,6 +9,7 @@ import { CharacterLook } from './character-look.js';
 import { retargetLibrary, retargetHumanoidLibrary } from './retarget.js';
 import { MotionLife } from './motion-life.js';
 import { BodyStyle } from './body-style.js';
+import { FacePerformance } from './face-performance.js';
 import { JointSprings } from './joint-springs.js';
 import { MotionSmear } from './motion-smear.js';
 
@@ -132,16 +133,13 @@ export class CharacterController {
     // Optional anime pacing: during fast action the body holds every other frame while everything else runs at full rate.
     this.frameCount=(this.frameCount||0)+1;const fastAction=this.twos&&['punch','kick','dash'].includes(state)&&dt>0;
     if(fastAction&&this.frameCount%2){this.root.updateMatrixWorld(true);return;}
-    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;if(dt>0){this.style??=new BodyStyle();this.livePose=this.style.apply({...this.livePose},this.poseVel,dt);}this.rigControls.apply(this.livePose,time,music);(this.jointSprings??=new JointSprings(this.rigControls)).apply(dt,this.livePose,this.rigControls);
+    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;if(dt>0){this.style??=new BodyStyle();this.livePose=this.style.apply({...this.livePose},this.poseVel,dt);}this.smear?.resetScales();this.rigControls.apply(this.livePose,time,music);(this.jointSprings??=new JointSprings(this.rigControls)).apply(dt,this.livePose,this.rigControls);
       this.root.updateMatrixWorld(true);(this.smear??=new MotionSmear(this)).update(dt,this.livePose);this.heroFinish?.updateSway(dt,this.anchor('head',new THREE.Vector3()),Math.max(0,(this.showcasePose.power||0)-.4));this.secondary?.update(dt,this.rigControls.bones,this.anchor('hips',new THREE.Vector3()),this.wind);}
-    // Expressions are two procedural shape keys ("focus", "shout"); they ease toward the pose.
+    // The face performs with the body: blinks, focus, shout, beat accents and a calm smile, written to
+    // whatever ARKit-named blendshapes the model has (this hero: procedural keys; a VRM: its own).
     if(this.showcasePose){
-      if(!this.morphs){this.morphs=[];this.model.traverse(o=>{if(o.morphTargetDictionary)this.morphs.push(o);});}
-      this.expression??={focus:0,shout:0};
-      for(const key of ['focus','shout']){
-        this.expression[key]=THREE.MathUtils.damp(this.expression[key],this.showcasePose[key]||0,6,dt);
-        for(const o of this.morphs){const i=o.morphTargetDictionary[key];if(i!=null)o.morphTargetInfluences[i]=this.expression[key];}
-      }
+      this.face??=new FacePerformance(this.model);
+      if(!this.face.enabledOverride)this.face.update(dt,this.livePose||this.showcasePose,music,time);
     }
     this.root.updateMatrixWorld(true);
   }

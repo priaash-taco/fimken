@@ -94,5 +94,8 @@ bass hit -> heavy punch; crescendo -> charge and beam; drop -> dash; held tone -
 67. Dragon Fist: coil low with the fist at the hip, hold the load, rising uppercut that sends a golden serpentine dragon of energy into the sky. [built: dragonFist]
 68. Kaio-ken: bear down, gather it in, the aura flares crimson with a shout, then a rush of dashing punches before the aura fades. [built: kaioken]
 
+## Face
+Standard blendshapes (ARKit names) on the hero, driven by src/engine/face-performance.js: blink, squint, brows, jaw, smile, cheeks. See CLAUDE_HANDOVER.md "Face".
+
 ## Captured motion (real human performers)
 69+. Real human motion from the CMU capture database: karate kicks, punches and blocks, dodges, jumps, katas, tai chi and a stretch (68 moves, src/engine/mocap/clips.json). Ids are `mocap_<clip>_<n>`. They join the freestyle pool by kind. [built: mocap_*]

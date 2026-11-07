@@ -1,6 +1,6 @@
 {
-  "sha256": "a20e6b25806694c5a91feea7fd4e0f878565e29b81b53f1196ade55171886658",
-  "bytes": 31303580,
+  "sha256": "fd54bf758af037dd349b0d714fa3d2f836e4f3aef3049f4f7185eea884777e56",
+  "bytes": 30556164,
   "vertices": 114759,
   "triangles": 179999,
   "skins": 1,
@@ -9,9 +9,7 @@
     "Meshy authored 4K PBR"
   ],
   "embeddedImages": 3,
-  "animations": [
-    "Idle_Breathe"
-  ],
+  "animations": [],
   "bones": [
     "hips",
     "spine",
@@ -66,7 +64,9 @@
     "toe.R"
   ],
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "No animation clips; acceptable for staging, not for runtime promotion."
+  ],
   "visualQuality": "Not established by structural validation. Requires neutral-light and deformation review.",
   "externalAnimationLibrary": {
     "url": "/animations/universal.gltf",

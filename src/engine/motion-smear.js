@@ -16,13 +16,14 @@ export class MotionSmear {
     this.enabled = !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.state = LIMBS.map(() => ({ prev: new THREE.Vector3(), has: false, vel: new THREE.Vector3(), stretch: 0, smear: 0, dir: new THREE.Vector3(), speed: 0 }));
     this.rootPrev = new THREE.Vector3(); this.rootHas = false;
-    this.scaled = new Set(); this.tmp = new THREE.Vector3(); this.inv = new THREE.Matrix4(); this.mesh = null;
+    this.scaled = new Set(); this.pinned = new Set(); this.tmp = new THREE.Vector3(); this.inv = new THREE.Matrix4(); this.mesh = null;
   }
   get bones() { return this.actor.rigControls?.bones; }
   resetScales() {
-    if (!this.scaled.size) return false;
+    if (!this.scaled.size && !this.pinned.size) return false;
     for (const b of this.scaled) b.scale.set(1, 1, 1);
-    this.scaled.clear(); return true;
+    for (const c of this.pinned) { c.matrixAutoUpdate = true; c.updateMatrix(); }
+    this.scaled.clear(); this.pinned.clear(); return true;
   }
   // Stretch only along the axis pointing to the bone's child, so thickness is preserved.
   stretchBone(bone, k) {
@@ -31,6 +32,10 @@ export class MotionSmear {
     const axis = child && child.position.lengthSq() > 1e-8 ? child.position.clone().normalize() : new THREE.Vector3(0, 1, 0);
     bone.scale.set(1 + (k - 1) * axis.x * axis.x, 1 + (k - 1) * axis.y * axis.y, 1 + (k - 1) * axis.z * axis.z);
     this.scaled.add(bone);
+    // Children would inherit the stretch and shear (mangled fingers, squashed boots). Give each child an exact
+    // local matrix that cancels the parent's scale: world = (P * S) * (S^-1 * T * R * Sc) = P * T * R * Sc.
+    this.inv.makeScale(1 / bone.scale.x, 1 / bone.scale.y, 1 / bone.scale.z);
+    for (const c of bone.children) if (c.isBone) { c.matrixAutoUpdate = false; c.matrix.compose(c.position, c.quaternion, c.scale).premultiply(this.inv); this.pinned.add(c); }
   }
   update(dt, pose) {
     const bones = this.bones, root = this.actor.root;
