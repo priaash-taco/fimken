@@ -42,3 +42,6 @@ public/studies/
 
 # Raw motion-capture downloads (see art/mocap/README.md)
 art/mocap/cmu/
+
+# Agent worktrees
+.claude/worktrees/
