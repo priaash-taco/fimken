@@ -64,9 +64,9 @@ export class CinematicRenderer {
       if(motionBlur>0.){vec2 mv=texture2D(tVelocity,vUv).xy;
        if(dot(mv,mv)==0.){vec4 cp=reproj*vec4(vUv*2.-1.,texture2D(tDepth,vUv).x*2.-1.,1.);mv=(vUv*2.-1.-cp.xy/max(abs(cp.w),1e-4))*.5;}
        mv*=motionBlur;float ml=length(mv*vec2(aspect,1.));
-       if(ml>.0007){if(ml>.0185){mv*=.0185/ml;ml=.0185;}
+       if(ml>.0007){if(ml>.012){mv*=.012/ml;ml=.012;}
         float jit=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));vec3 macc=c;float mw=1.;
-        for(int i=0;i<8;i++){vec2 tuv=clamp(uv+mv*((float(i)+jit)/8.-.5),vec2(.001),vec2(.999));
+        for(int i=0;i<12;i++){vec2 tuv=clamp(uv+mv*((float(i)+jit)/12.-.5),vec2(.001),vec2(.999));
          float w=1.-step(1.6*ml+.0004,length(texture2D(tVelocity,tuv).xy*motionBlur*vec2(aspect,1.)));
          macc+=texture2D(tDiffuse,tuv).rgb*w;mw+=w;}
         c=macc/mw;}}

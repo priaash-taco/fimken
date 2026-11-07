@@ -257,7 +257,7 @@ export class TrainingScene {
     this.pipeline.cold = THREE.MathUtils.damp(this.pipeline.cold || 0, (this.director.signals?.beam || 0) * .75 * effects + (this.director.signals?.charge || 0) * .6 * effects, 4, Math.min(.05, wallDt));
     this.pipeline.blur = Math.min(1, (this.pipeline.speed || 0) * .9 + this.mood.levels.release * .3 * effects) * (this.reducedMotion ? 0 : 1);
     // Motion blur: moderate by default; off for reduced motion, inspection and when the user turns it off.
-    this.pipeline.motionBlur = this.motionBlurOn && !this.reducedMotion && !this.inspection && this.hasCharacter ? .6 : 0; this.pipeline.hero = this.actor.model;
+    this.pipeline.motionBlur = this.motionBlurOn && !this.reducedMotion && !this.inspection && this.hasCharacter ? .35 : 0; this.pipeline.hero = this.actor.model;
     this.vfx.camera = this.camera;
     this.pipeline.gpuMs = this.performance.stats.gpuMs;
     this.pipeline.render(wallDt, this.director.power, effects, this.time);
