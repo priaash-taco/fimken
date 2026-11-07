@@ -1,0 +1,81 @@
+{
+ "demo": {
+  "frames": 1120,
+  "beats": 34,
+  "bassHits": 31,
+  "drops": 1,
+  "crescendos": 1,
+  "sustained": 1,
+  "bpmSeen": [
+   96
+  ],
+  "sections": {
+   "quiet": 8,
+   "flow": 310,
+   "build": 531,
+   "peak": 271
+  },
+  "moves": [
+   "powerup",
+   "blast",
+   "backKick",
+   "heavy",
+   "airCombo"
+  ],
+  "maxEnergy": 0.6358520880962654,
+  "maxBeatCount": 34,
+  "contacts0": 0,
+  "impacts0": 0,
+  "beamFrames": 61,
+  "maxPulse": 1,
+  "mode": "demo",
+  "firstBeatAt": 0.3,
+  "contacts": 9,
+  "impactsAttr": 1,
+  "finalMode": "demo",
+  "section": "flow"
+ },
+ "scoreButtonVisibleInUI": false,
+ "scoreModeAfterClick": "file",
+ "scoreStatus": "Playing Fimken — First Light.wav. This file stays on your device.",
+ "score": {
+  "frames": 1575,
+  "beats": 26,
+  "bassHits": 0,
+  "drops": 0,
+  "crescendos": 2,
+  "sustained": 2,
+  "bpmSeen": [
+   120
+  ],
+  "sections": {
+   "quiet": 552,
+   "build": 796,
+   "peak": 227
+  },
+  "moves": [
+   "powerup",
+   "blast",
+   "hover",
+   "airCombo",
+   "transformation",
+   "alert"
+  ],
+  "maxEnergy": 0.8301893819693777,
+  "maxBeatCount": 26,
+  "contacts0": 9,
+  "impacts0": 1,
+  "beamFrames": 82,
+  "maxPulse": 1,
+  "mode": "file",
+  "firstBeatAt": 4,
+  "contacts": 8,
+  "impactsAttr": 1,
+  "finalMode": "idle",
+  "section": "quiet"
+ },
+ "errors": {
+  "page": [],
+  "console": []
+ }
+}

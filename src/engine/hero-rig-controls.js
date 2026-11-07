@@ -68,6 +68,12 @@ export class HeroRigControls {
     if(p[side+'Ankle'])footBone.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p[side+'Ankle'])));
     footBone.updateWorldMatrix(true,true);
   }
+  // On the ground an ankle target never goes below its standing height: captured clips carry a few centimetres of
+  // sink in deep stances and the leg keep-out can push a planted foot down while the other leg kicks past it.
+  keepFeetAboveFloor(feet,p){
+    if((p.lift||0)>=.03||p.flip||this.actor.root.position.y>=.03)return;
+    for(const side of ['left','right'])feet[side].y=Math.max(feet[side].y,this.feet[side].y);
+  }
   // Pushes the hand and foot targets (root space) apart from each other and from the body.
   separateLimbs(p,hands,feet){
     const root=this.actor.root,at=name=>root.worldToLocal(this.bones[name].getWorldPosition(new THREE.Vector3()));
@@ -202,11 +208,13 @@ export class HeroRigControls {
     for(const side of ['left','right']){const sign=side==='left'?1:-1;const hand=new THREE.Vector3(...p[side]);hand.y+=breathing+tremor+Math.sin(time*1.9+sign*.65)*.008*idle;hand.z+=Math.sin(time*1.65+sign)*.008*idle;hands[side]=hand;
       const foot=this.feet[side].clone();if(!p.footControl){foot.y+=(side==='left'?.09:.015)*hoverWeight;foot.z+=(side==='left'?.10:-.07)*hoverWeight;}
       if(p[side+'Foot'])foot.add(new THREE.Vector3(...p[side+'Foot']));feet[side]=foot;}
+    this.keepFeetAboveFloor(feet,p);
     // Self-collision: solve every limb once, build capsules from the posed bones, push the
     // hand and foot targets until no limb overlaps another or the body, then solve again.
     // Stateless, so the same pose always gives the same result.
     for(const side of ['left','right']){this.solveLeg(side,feet[side],p,hoverWeight);this.solveArm(side,hands[side],p);}
     this.separateLimbs(p,hands,feet);
+    this.keepFeetAboveFloor(feet,p); // the keep-out may push a planted foot into the floor
     for(const side of ['left','right']){this.solveLeg(side,feet[side],p,hoverWeight);this.solveArm(side,hands[side],p);}
     // Squash and stretch last, so IK never sees a skewed root. The root shifts so the support foot
     // (or the point between both feet) stays exactly where the unscaled pose put it.

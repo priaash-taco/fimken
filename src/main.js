@@ -457,7 +457,8 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   for(const id of ['powerup','charge','blast'])dock.append(document.querySelector(`[data-practice="${id}"]`));
   const moves=document.createElement('select');moves.className='move-picker';moves.setAttribute('aria-label','Movement sequence');
   moves.add(new Option('More moves…',''));
-  for(const id of Object.keys(SHOWCASE_MOVES).filter(id=>!['sequence','stance','charge-pose','beam-pose','powerup','charge','blast'].includes(id)))moves.add(new Option(SHOWCASE_MOVES[id].label,id));
+  const fillMoves=()=>{const have=new Set([...moves.options].map(o=>o.value));for(const id of Object.keys(SHOWCASE_MOVES).filter(id=>!['sequence','stance','charge-pose','beam-pose','powerup','charge','blast'].includes(id)))if(!have.has(id))moves.add(new Option(SHOWCASE_MOVES[id].label,id));};
+  fillMoves();window.addEventListener('fimken:mocap-loaded',fillMoves);  // captured moves arrive after first paint
   moves.addEventListener('change',()=>{if(moves.value){scene?.practice(moves.value);moves.value='';}});dock.append(moves);
   dock.append($('#motion'),$('#fullscreen'));$('.universe').append(dock);
   // The dock was for review. The normal page shows the wordmark, a sound chip and settings;

@@ -1,0 +1,19 @@
+{
+ "canvasFrames": 336,
+ "blankCanvasFrames": 0,
+ "minimumMeanRGB": 40.96,
+ "seekedFrames": 7323,
+ "blankSeekedFrames": [],
+ "internalResizes": 16,
+ "renderScalesSeen": [
+  "1.00",
+  "0.80",
+  "0.60",
+  "0.50",
+  "0.90"
+ ],
+ "pageCaptures": 111,
+ "blankPageCaptures": 0,
+ "smallestCaptureVsMedian": 0.69,
+ "errors": []
+}

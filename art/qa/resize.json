@@ -1,0 +1,146 @@
+{
+ "sizes": [
+  {
+   "viewport": "1920x1080",
+   "recoveredToScale1Seconds": null,
+   "finalScale": 0.5,
+   "frames": 89,
+   "blank": 0,
+   "minMean": 55.54,
+   "nan": 0,
+   "maxJump": 0,
+   "canvas": [
+    2880,
+    1620
+   ],
+   "client": [
+    1920,
+    1080
+   ],
+   "resolution": "2880×1620",
+   "scale": "0.50",
+   "fps": 27.010601633321016,
+   "gpuMs": 7.1676881734966775
+  },
+  {
+   "viewport": "1280x720",
+   "recoveredToScale1Seconds": null,
+   "finalScale": 0.8,
+   "frames": 604,
+   "blank": 0,
+   "minMean": 41.04,
+   "nan": 0,
+   "maxJump": 0,
+   "canvas": [
+    1920,
+    1080
+   ],
+   "client": [
+    1280,
+    720
+   ],
+   "resolution": "1920×1080",
+   "scale": "0.80",
+   "fps": 51.648445911857436,
+   "gpuMs": 7.230178409729006
+  },
+  {
+   "viewport": "800x600",
+   "recoveredToScale1Seconds": null,
+   "finalScale": 0.9,
+   "frames": 678,
+   "blank": 0,
+   "minMean": 41.01,
+   "nan": 0,
+   "maxJump": 0,
+   "canvas": [
+    1200,
+    900
+   ],
+   "client": [
+    800,
+    600
+   ],
+   "resolution": "1200×900",
+   "scale": "1.00",
+   "fps": 56.23242671306797,
+   "gpuMs": 6.44378616740329
+  },
+  {
+   "viewport": "390x844",
+   "recoveredToScale1Seconds": 9.65,
+   "finalScale": 1,
+   "frames": 677,
+   "blank": 0,
+   "minMean": 30.97,
+   "nan": 0,
+   "maxJump": 0,
+   "canvas": [
+    585,
+    1266
+   ],
+   "client": [
+    390,
+    844
+   ],
+   "resolution": "585×1266",
+   "scale": "1.00",
+   "fps": 56.34331808660751,
+   "gpuMs": 6.457978870718229
+  },
+  {
+   "viewport": "2560x1440",
+   "recoveredToScale1Seconds": null,
+   "finalScale": 0.6,
+   "frames": 644,
+   "blank": 0,
+   "minMean": 41.33,
+   "nan": 0,
+   "maxJump": 0,
+   "canvas": [
+    3840,
+    2160
+   ],
+   "client": [
+    2560,
+    1440
+   ],
+   "resolution": "3840×2160",
+   "scale": "0.60",
+   "fps": 54.374914813622176,
+   "gpuMs": 11.281829738269268
+  }
+ ],
+ "throttle": {
+  "slow": {
+   "frames": 216,
+   "blank": 0,
+   "nan": 0,
+   "maxJump": 0.001,
+   "fps": 12.418889163706341,
+   "worstMs": 144.39999389648438,
+   "root": [
+    2.706404561001434e-10,
+    0.0031001080705688015,
+    0.000046313066929414114
+   ],
+   "move": "blast"
+  },
+  "after": {
+   "nan": 0,
+   "maxJump": 0.001,
+   "fps": 56.093113990055706,
+   "root": [
+    2.678654496901352e-10,
+    0.0030688177734463145,
+    0.00004583819683996707
+   ],
+   "scale": "0.80"
+  },
+  "blankTotal": 0
+ },
+ "errors": {
+  "page": [],
+  "console": []
+ }
+}

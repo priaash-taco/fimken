@@ -146,10 +146,12 @@ export class TrainingScene {
     this.vfx.setQuality(q.particles); this.actor.setQuality(Math.min(q.anisotropy,this.renderer.capabilities.getMaxAnisotropy()));
   }
   resetTraining() {
+    const wasAuto = this.isShowcase && this.director.auto; // a reset (First Light, Reset training) must not stop Auto: the hero would stand still through the music
     this.actor.life?.reset();
     this.physics.reset(); this.director.reset(); this.vfx.reset(); this.rocks.reset(); this.sig.reset(); this.music.reset();
     this.time = 0; this.shake = 0; this.lastRevision = -1;
     this.actor.root.position.set(0, 0, 0); this.actor.root.rotation.set(0, CHARACTER.facing, 0);
+    if(wasAuto)this.director.practice('freestyle');
     if(this.isShowcase)this.actor.showcasePose=this.director.pose;
     this.actor.update(0,0,'idle',this.music);this.resetCamera();
   }

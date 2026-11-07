@@ -28,8 +28,9 @@ await page.evaluate(() => { const s = window.__fimken; s.practice('freestyle'); 
 out.demo = await monitor(seconds); console.log('demo', JSON.stringify(out.demo));
 // 2. Bundled First Light score through the real button.
 await page.evaluate(() => window.__fimken.audio.stop());
-await page.click('#settings'); await page.waitForSelector('#score', { state: 'visible' });
-await page.click('#score');
+// The Demo and First Light buttons sit in the advanced section, which the compact production UI hides: click through the DOM.
+out.scoreButtonVisibleInUI = await page.evaluate(() => { const b = document.querySelector('#score'); return Boolean(b.offsetParent); });
+await page.evaluate(() => document.querySelector('#score').click());
 await page.waitForFunction(() => window.__fimken.audio.mode === 'file', null, { timeout: 30000 }).catch(() => {});
 out.scoreModeAfterClick = await page.evaluate(() => window.__fimken.audio.mode);
 out.scoreStatus = await page.evaluate(() => document.querySelector('#source-status')?.textContent);

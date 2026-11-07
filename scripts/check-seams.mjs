@@ -6,6 +6,8 @@
 // Lower seam jerk relative to body jerk means transitions carry momentum instead of popping.
 //   node scripts/check-seams.mjs [--seconds 240] [--seed 7]
 import { FreestyleDirector } from '../src/engine/freestyle-director.js';
+import { loadMocapLibrary } from '../src/engine/mocap-moves.js';
+await loadMocapLibrary(); // the captured clips load lazily; without them the pool (and the seam numbers) differ
 const args = process.argv.slice(2), option = (n, f) => { const i = args.indexOf('--' + n); return i < 0 ? f : args[i + 1]; };
 const seconds = Number(option('seconds', 240)), seed = Number(option('seed', 7)), dt = 1 / 60;
 const d = new FreestyleDirector(seed); d.practice('freestyle');

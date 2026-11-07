@@ -44,7 +44,7 @@ const state = page => page.evaluate(() => { const s = window.__fimken; return { 
 }
 // 4. Neutral view: effects off, then back on.
 {
-  const { browser, page, errors } = await launch({ query: 'controls=1&lens=chroma' });
+  const { browser, page, errors } = await launch({ query: 'controls=1&lens=volume' });
   const probe = () => page.evaluate(() => { const s = window.__fimken; return { inspection: s.inspection, attr: s.canvas.dataset.inspection, motionBlur: s.pipeline.motionBlur, skyVisible: s.world.cosmos.root.visible, lensCur: s.lens.name,
     beamVisible: s.canvas.dataset.beamVisible, effectsDisabled: document.querySelector('#effects').disabled, beamRadius: Number(s.canvas.dataset.beamRadius), pillars: s.pillars.group?.visible ?? null, ambientParticles: s.world.particles?.visible ?? null }; });
   await page.waitForTimeout(1500);
@@ -53,13 +53,14 @@ const state = page => page.evaluate(() => { const s = window.__fimken; return { 
   await page.setChecked('#asset-inspection', true); await page.waitForTimeout(800);
   await page.evaluate(() => window.__fimken.practice('blast')); await page.waitForTimeout(4600);   // beam release at 3.62 s
   const off = await probe(); console.log('neutral on', JSON.stringify(off));
+  check('Neutral before: sky visible', on0.skyVisible, on0);
   check('Neutral: inspection flag', off.inspection && off.attr === 'true' && off.effectsDisabled);
   check('Neutral: sky hidden, motion blur 0', !off.skyVisible && off.motionBlur === 0, off);
   check('Neutral: no beam drawn', off.beamVisible === 'false' || off.beamRadius === 0, { beamVisible: off.beamVisible, beamRadius: off.beamRadius });
   await page.setChecked('#asset-inspection', false); await page.waitForTimeout(1000);
   await page.evaluate(() => window.__fimken.practice('blast')); await page.waitForTimeout(4600);
   const back = await probe(); console.log('neutral off', JSON.stringify(back));
-  check('Neutral off: effects return', !back.inspection && back.skyVisible && back.motionBlur > 0 && !back.effectsDisabled && back.lensCur === 'chroma', back);
+  check('Neutral off: effects return', !back.inspection && back.skyVisible && back.motionBlur > 0 && !back.effectsDisabled && back.lensCur === 'volume', back);
   check('Neutral off: beam fires again', back.beamVisible === 'true' || back.beamRadius > 0, { beamVisible: back.beamVisible, beamRadius: back.beamRadius });
   check('Neutral page errors', errors.page.length === 0, errors.page.slice(0, 3));
   await browser.close();

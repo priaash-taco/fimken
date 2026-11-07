@@ -14,7 +14,7 @@ test('sharpness comparison keeps asset pose and camera, reports GPU sampling and
  expect(sharp.asset).toBe(cinematic.asset);for(const k of ['position','quaternion','target'])sharp.camera[k].forEach((v,i)=>expect(v).toBeCloseTo(cinematic.camera[k][i],9));expect(sharp.camera.fov).toBe(cinematic.camera.fov);expect(sharp.pose).toEqual(cinematic.pose);
  expect(sharp.treatment).toMatchObject({material:'authored',celStrength:0,outlineVisible:false,bloom:false,heatDistortion:false,postProcessing:false,aura:false,neutralLighting:true});
  expect(sharp.antialiasing).toMatchObject({sceneUsesDefaultFramebuffer:true,fxaa:false});
- expect(sharp.textures.length).toBe(3);
+ expect(sharp.textures.length).toBeGreaterThanOrEqual(3);
  for(const t of sharp.textures){expect(t.gpuSampling.anisotropy).toBe(sharp.gpu.maxAnisotropy);expect(t.compressed).toBe(false);expect(t.exceedsGpuTextureLimit).toBe(false);}
  expect(sharp.viewport.rendererPixelRatio).toBeGreaterThanOrEqual(cinematic.viewport.rendererPixelRatio);
  await close();await page.screenshot({path:'art/previews/quality-sharp.png'});

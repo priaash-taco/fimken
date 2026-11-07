@@ -1,0 +1,160 @@
+[
+ {
+  "name": "persist lens",
+  "ok": true,
+  "detail": {
+   "lens": "noir"
+  }
+ },
+ {
+  "name": "persist quality",
+  "ok": true,
+  "detail": {
+   "quality": "balanced"
+  }
+ },
+ {
+  "name": "persist exaggeration",
+  "ok": true,
+  "detail": {
+   "exaggeration": 0.8
+  }
+ },
+ {
+  "name": "persist effects",
+  "ok": true,
+  "detail": {
+   "effects": 0.4
+  }
+ },
+ {
+  "name": "persist motion blur",
+  "ok": true,
+  "detail": {
+   "on": false,
+   "strength": 0
+  }
+ },
+ {
+  "name": "URL lens beats saved lens",
+  "ok": false,
+  "detail": {
+   "lens": "noir",
+   "saved": "noir"
+  }
+ },
+ {
+  "name": "URL exaggeration beats saved value",
+  "ok": false,
+  "detail": {
+   "exaggeration": 0.8,
+   "saved": 0.8
+  }
+ },
+ {
+  "name": "page errors",
+  "ok": true,
+  "detail": []
+ },
+ {
+  "name": "URL lens=noir",
+  "ok": true,
+  "detail": {
+   "lens": "noir",
+   "attr": "noir"
+  }
+ },
+ {
+  "name": "URL blur=0",
+  "ok": true,
+  "detail": {
+   "on": false,
+   "strength": 0
+  }
+ },
+ {
+  "name": "URL exaggeration=0.8",
+  "ok": true,
+  "detail": {
+   "exaggeration": 0.8
+  }
+ },
+ {
+  "name": "URL params page errors",
+  "ok": true,
+  "detail": []
+ },
+ {
+  "name": "Neutral before: sky visible",
+  "ok": true,
+  "detail": {
+   "inspection": false,
+   "attr": "false",
+   "motionBlur": 0.35,
+   "skyVisible": true,
+   "lensCur": "volume",
+   "beamVisible": "false",
+   "effectsDisabled": false,
+   "beamRadius": 0,
+   "pillars": null,
+   "ambientParticles": null
+  }
+ },
+ {
+  "name": "Neutral: inspection flag",
+  "ok": true
+ },
+ {
+  "name": "Neutral: sky hidden, motion blur 0",
+  "ok": true,
+  "detail": {
+   "inspection": true,
+   "attr": "true",
+   "motionBlur": 0,
+   "skyVisible": false,
+   "lensCur": "volume",
+   "beamVisible": "false",
+   "effectsDisabled": true,
+   "beamRadius": 0,
+   "pillars": null,
+   "ambientParticles": null
+  }
+ },
+ {
+  "name": "Neutral: no beam drawn",
+  "ok": true,
+  "detail": {
+   "beamVisible": "false",
+   "beamRadius": 0
+  }
+ },
+ {
+  "name": "Neutral off: effects return",
+  "ok": true,
+  "detail": {
+   "inspection": false,
+   "attr": "false",
+   "motionBlur": 0.35,
+   "skyVisible": true,
+   "lensCur": "volume",
+   "beamVisible": "true",
+   "effectsDisabled": false,
+   "beamRadius": 1.558,
+   "pillars": null,
+   "ambientParticles": null
+  }
+ },
+ {
+  "name": "Neutral off: beam fires again",
+  "ok": true,
+  "detail": {
+   "beamVisible": "true",
+   "beamRadius": 1.558
+  }
+ },
+ {
+  "name": "Neutral page errors",
+  "ok": true,
+  "detail": []
+ }
+]
