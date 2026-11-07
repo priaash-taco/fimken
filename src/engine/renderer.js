@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { MotionVelocity } from './motion-blur.js';
 
 const BLOOM_SCALE = .5;
 export const QUALITY = Object.freeze({
@@ -26,7 +27,8 @@ export class CinematicRenderer {
     this.renderer.shadowMap.enabled = true;
     // Hard-edged, graphic ground shadows rather than soft physical ones.
     this.renderer.shadowMap.type = THREE.BasicShadowMap;
-    const target=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType});
+    const target=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,depthTexture:new THREE.DepthTexture(1,1)}); // depth feeds the camera motion blur
+    this.velocity=new MotionVelocity(); this.motionBlur=0;
     this.composer = new EffectComposer(this.renderer,target);
     this.composer.addPass(new RenderPass(scene, camera));
     this.heatWorld = new THREE.Vector3(0,1,0); this.heatProjection = new THREE.Vector3(); this.mirrorWorld = new THREE.Vector3(); this.mirrorProjection = new THREE.Vector3(); this.shaftWorld = new THREE.Vector3(2.8,3,-2.5); this.shaftProjection = new THREE.Vector3();
@@ -39,10 +41,10 @@ export class CinematicRenderer {
     // Heat haze, grade, tone mapping and sRGB conversion share one full-screen pass.
     // The arithmetic and its order match the former separate passes.
     this.finish = new ShaderPass(new THREE.RawShaderMaterial({
-      uniforms: { tDiffuse:{value:null}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, lensSat:{value:1}, lensShadow:{value:new THREE.Vector3()}, lensBlack:{value:0}, lensVig:{value:0}, shafts:{value:0}, rays:{value:0}, shaftSrc:{value:new THREE.Vector2(.7,.8)}, mirrorY:{value:0}, mirror:{value:0}, fade:{value:1}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
+      uniforms: { tDiffuse:{value:null}, motionBlur:{value:0}, tVelocity:{value:null}, tDepth:{value:null}, reproj:{value:new THREE.Matrix4()}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, lensSat:{value:1}, lensShadow:{value:new THREE.Vector3()}, lensBlack:{value:0}, lensVig:{value:0}, shafts:{value:0}, rays:{value:0}, shaftSrc:{value:new THREE.Vector2(.7,.8)}, mirrorY:{value:0}, mirror:{value:0}, fade:{value:1}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
       vertexShader:'precision highp float;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;attribute vec3 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`precision highp float;
-      uniform sampler2D tDiffuse;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;uniform float lensSat;uniform float lensBlack;uniform float lensVig;uniform float shafts;uniform float rays;uniform vec2 shaftSrc;uniform float mirrorY;uniform float mirror;uniform float fade;uniform vec3 lensShadow;varying vec2 vUv;
+      uniform sampler2D tDiffuse;uniform sampler2D tVelocity;uniform sampler2D tDepth;uniform mat4 reproj;uniform float motionBlur;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;uniform float lensSat;uniform float lensBlack;uniform float lensVig;uniform float shafts;uniform float rays;uniform vec2 shaftSrc;uniform float mirrorY;uniform float mirror;uniform float fade;uniform vec3 lensShadow;varying vec2 vUv;
       #include <tonemapping_pars_fragment>
       #include <colorspace_pars_fragment>
       void main(){vec2 uv=vUv;
@@ -58,6 +60,16 @@ export class CinematicRenderer {
       if(blur>0.){vec2 bd=(uv-center);bd.x*=aspect;float amt=blur*.075*smoothstep(.05,.55,length(bd));vec3 acc=vec3(0.);
        for(int i=0;i<8;i++){float k=float(i)/7.;acc+=texture2D(tDiffuse,clamp(uv-(uv-center)*amt*k,vec2(.001),vec2(.999))).rgb;}c=acc/8.;}
       else c=texture2D(tDiffuse,uv).rgb;
+      // Motion blur: taps along per-pixel screen velocity (hero from the velocity target, everything else from depth and the previous camera).
+      if(motionBlur>0.){vec2 mv=texture2D(tVelocity,vUv).xy;
+       if(dot(mv,mv)==0.){vec4 cp=reproj*vec4(vUv*2.-1.,texture2D(tDepth,vUv).x*2.-1.,1.);mv=(vUv*2.-1.-cp.xy/max(abs(cp.w),1e-4))*.5;}
+       mv*=motionBlur;float ml=length(mv*vec2(aspect,1.));
+       if(ml>.0007){if(ml>.0185){mv*=.0185/ml;ml=.0185;}
+        float jit=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));vec3 macc=c;float mw=1.;
+        for(int i=0;i<8;i++){vec2 tuv=clamp(uv+mv*((float(i)+jit)/8.-.5),vec2(.001),vec2(.999));
+         float w=1.-step(1.6*ml+.0004,length(texture2D(tVelocity,tuv).xy*motionBlur*vec2(aspect,1.)));
+         macc+=texture2D(tDiffuse,tuv).rgb*w;mw+=w;}
+        c=macc/mw;}}
       c+=ringGlow*vec3(.18,.3,.5);float l=dot(c,vec3(.2126,.7152,.0722));
       c=mix(vec3(l),c,1.04);c*=vec3(1.+warmth,1.,1.-warmth*.55);
       c=mix(c,c*vec3(.66,.78,1.32)+vec3(.012,.0,.06)*l,cold);c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,1.+cold*.28);
@@ -87,6 +99,7 @@ export class CinematicRenderer {
       gl_FragColor=sRGBTransferOETF(vec4(c,1.));}`,
     }));
     this.composer.addPass(this.finish);
+    { const pass=this.finish, draw=pass.render.bind(pass); pass.render=(r,w,read,...rest)=>{pass.uniforms.tDepth.value=read.depthTexture;draw(r,w,read,...rest);}; }
     this.fxaa = new ShaderPass({...FXAAShader,fragmentShader:FXAAShader.fragmentShader.replace('_SubpixelBlending = 1.0','_SubpixelBlending = 0.35')});
     this.composer.addPass(this.fxaa);
     this.sampleAge = 0; this.raiseAge = 0; this.raiseDelay = 12; this.gpuMs = null; this.heatStrength = 0;
@@ -107,6 +120,7 @@ export class CinematicRenderer {
     this.composer.setPixelRatio(postRatio);this.composer.setSize(width,height);
     // Glow is low-frequency: its blur chain starts from half of the internal resolution.
     this.bloom.setSize(width*postRatio*BLOOM_SCALE,height*postRatio*BLOOM_SCALE);
+    this.velocity.setSize(width*postRatio,height*postRatio); // follows the composer size, so it follows the governor too
     this.fxaa.uniforms.resolution.value.set(1/(width*postRatio),1/(height*postRatio));
     this.bloom.enabled = preset.bloom;
     this.fxaa.enabled=true;
@@ -151,6 +165,10 @@ export class CinematicRenderer {
     const energy = Math.max(0, power - .25) / .75;
     this.bloom.strength = (.18 + energy * .1) * effects * (this.lensBloom ?? 1);
     this.bloom.radius = .18 + energy * .22;
+    // Motion blur: hero velocity is drawn first; off, inspection and unready states skip the pass entirely.
+    const blurOn = !this.inspection && this.motionBlur > 0 && this.hero && this.velocity.target.width > 1;
+    finish.motionBlur.value = blurOn ? this.motionBlur : 0;
+    if (blurOn) { finish.reproj.value.copy(this.velocity.render(this.renderer, this.scene, this.camera, this.hero, dt)); finish.tVelocity.value = this.velocity.target.texture; } else this.velocity.invalidate();
     if (this.inspection) this.renderer.render(this.scene, this.camera);
     else this.composer.render();
     this.canvas.dataset.postprocessing = String(!this.inspection);
