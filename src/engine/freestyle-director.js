@@ -1,4 +1,4 @@
-import {ShowcaseDirector,SHOWCASE_MOVES,unwind} from './showcase-director.js';
+import {ShowcaseDirector,SHOWCASE_MOVES,unwind,samplePose} from './showcase-director.js';
 import {HeroMotionPhysics} from './hero-motion-physics.js';
 import {MOCAP_IDS} from './mocap-moves.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -37,9 +37,48 @@ export class FreestyleDirector extends ShowcaseDirector {
     this.motion.reset({x:this.pose.travel[0],y:this.pose.lift,z:this.pose.travel[1]});
     this.auto=true;this.history=[];this.begin('powerup');
   }
-  begin(id){
+  // Pose features for matching: hands, feet, crouch, lean, twist, lift and limb velocities, all in root space
+  // (so heading does not matter). Velocity comes from the key after `at` when sampling a candidate.
+  static features(pose,vel){
+    const f=[];for(const k of ['left','right','leftFoot','rightFoot'])f.push(...(pose[k]||[0,0,0]));
+    f.push((pose.crouch||0)*2,(pose.lean||0)*1.5,pose.twist||0,(pose.lift||0)*2);
+    for(const k of ['left','right','leftFoot','rightFoot'])f.push(...((vel?.[k])||[0,0,0]).map(v=>v*.12));
+    return f;
+  }
+  static distance(a,b){let s=0;for(let i=0;i<a.length;i++){const d=a[i]-b[i];s+=d*d;}return Math.sqrt(s);}
+  // Where a candidate move could start: its beginning, and for captured clips any key in the first 45% that is
+  // at least 0.4 s before the first cue (so no strike is cut).
+  entries(id){
+    const move=SHOWCASE_MOVES[id];if(!id.startsWith('mocap_'))return [0];
+    const firstCue=Math.min(...(move.cues||[]).map(c=>c.at),Infinity),limit=Math.min(move.duration*.45,firstCue-.4),out=[0];
+    for(let i=4;i<move.keys.length;i+=4){const at=move.keys[i].at;if(at>limit)break;out.push(at);}
+    return out;
+  }
+  // Cost of entering `id` at `offset` from the pose on screen, for both mirror options when the move allows it.
+  cost(id,offset,mirrored){
+    const move=SHOWCASE_MOVES[id],h=1/60,a=samplePose(move.keys,offset),b=samplePose(move.keys,offset+h);
+    const vel={};for(const k of ['left','right','leftFoot','rightFoot'])vel[k]=a[k].map((x,j)=>(b[k][j]-x)/h);
+    if(mirrored){const flip=v=>[-v[0],v[1],v[2]];for(const [l,r] of [['left','right'],['leftFoot','rightFoot']]){[a[l],a[r]]=[flip(a[r]),flip(a[l])];[vel[l],vel[r]]=[flip(vel[r]),flip(vel[l])];}a.twist=-a.twist;}
+    return FreestyleDirector.distance(FreestyleDirector.features(this.pose,this.poseVel),FreestyleDirector.features(a,vel));
+  }
+  // Motion matching over the tier's pool: score every candidate entry against the current pose and momentum,
+  // then draw from the best few so performances still vary.
+  match(pool){
+    const scored=[];
+    for(const id of pool){const vary=VARIATION[id];
+      for(const offset of this.entries(id))for(const mirror of vary?.mirror?[false,true]:[false])scored.push({id,offset,mirror,cost:this.cost(id,offset,mirror)});}
+    scored.sort((x,y)=>x.cost-y.cost);
+    const top=scored.slice(0,Math.min(3,scored.length)),r=this.random();
+    return top[r<.6?0:r<.85?Math.min(1,top.length-1):Math.min(2,top.length-1)];
+  }
+  begin(id,entry=null){
     const old=this.pose,origin=[this.motion.position.x,this.motion.position.z];
     const move=structuredClone(SHOWCASE_MOVES[id]);
+    // Entering a captured clip part-way: drop what came before and make the entry frame the new start.
+    if(entry?.offset>0){const o=entry.offset,first=samplePose(move.keys,o),firstKey=[...move.keys].reverse().find(k=>k.at<=o)||move.keys[0];
+      move.keys=[{...firstKey,at:0,pose:first},...move.keys.filter(k=>k.at>o).map(k=>({...k,at:+(k.at-o).toFixed(4)}))];
+      move.cues=(move.cues||[]).filter(c=>c.at>o).map(c=>({...c,at:+(c.at-o).toFixed(4)}));move.duration=+(move.duration-o).toFixed(4);
+      move.stages=move.keys.map(k=>({at:k.at,action:k.stage}));}
     if(move.hold&&move.keys.at(-1).pose.lift>0){
       const end=move.duration;move.duration=end+2.1;
       move.keys.push({...structuredClone(move.keys.at(-1)),at:end+1},
@@ -49,12 +88,12 @@ export class FreestyleDirector extends ShowcaseDirector {
     this.heading=0;const vary=VARIATION[id];
     if(vary){
       const forced=this.forcedVariation;
-      if(forced?forced.mirror:vary.mirror&&this.random()<.5)mirror(move);
+      if(forced?forced.mirror:entry?entry.mirror:vary.mirror&&this.random()<.5)mirror(move);
       const heading=forced?forced.heading||0:(this.random()*2-1)*vary.turn,c=Math.cos(heading),s=Math.sin(heading);this.heading=heading;
       for(const k of move.keys){const [x,z]=k.pose.travel;k.pose.travel=[x*c+z*s,-x*s+z*c];k.pose.yaw+=heading;}
     }
     for(const k of move.keys)k.pose.travel=k.pose.travel.map((v,i)=>clamp(v+origin[i],-1.2,1.2));
-    this.from=unwind(old);this.move=move;this.moveId=id;this.time=0;this.revision++;this.history.push(id);if(this.history.length>32)this.history.shift();
+    this.move=move;this.moveId=id;this.time=0;this.revision++;this.history.push(id);if(this.history.length>32)this.history.shift();this.beginBlend(unwind(old));
     // Land and settle before the next grounded attack.
     // Strikes follow the tempo when one is detected.
     // Everything else gets a slightly different pace each time; the beam keeps its timing.
@@ -76,7 +115,7 @@ export class FreestyleDirector extends ShowcaseDirector {
       if(music.section==='quiet'&&this.random()<.4)return this.history.at(-1)==='hover'?'combatIdle':'hover';
     }
     const pool=TIERS[tier],recent=this.history.slice(-3);const options=pool.filter(id=>!recent.includes(id));
-    return (options.length?options:pool)[Math.floor(this.random()*options.length||pool.length)];
+    return this.match(options.length?options:pool);
   }
   // Big moves (tier 3 and up) start on the bar's first beat; smaller ones on any beat.
   ready(music,id){
@@ -101,8 +140,8 @@ export class FreestyleDirector extends ShowcaseDirector {
     else if(music?.sustained&&grounded&&soft&&this.moveId!=='hover'&&this.time>.6)this.begin('hover');
     // With a tempo, the next move waits for a beat (up to one bar) so it starts on the music.
     if(this.time>=this.move.duration && this.motion.position.y<.015){
-      this.next??=this.choose(music);
-      if(this.ready(music,this.next)){this.waited=0;const id=this.next;this.next=null;this.begin(id);}
+      this.next??=this.choose(music);const pick=typeof this.next==='string'?{id:this.next}:this.next;
+      if(this.ready(music,pick.id)){this.waited=0;this.next=null;this.begin(pick.id,pick);}
     }
     super.update(dt*this.rate);
     // Every beat lands in the body: a quick dip and shoulder flinch that decays before the next.

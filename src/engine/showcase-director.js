@@ -119,13 +119,42 @@ export function samplePose(keys,time) {
  }
  return pose;
 }
+// Inertialization (Bollo, 2016): a transition keeps the old motion's offset AND velocity and lets both decay
+// along a quintic curve, so the body never changes direction without momentum and never pops. One curve per
+// scalar channel; arrays get one per element. Channels that are switches (hitStop, beam, ...) still cross-fade.
+const DISCRETE=new Set(['hitStop','beam','charge','power','pivot','footControl','guard','trails','fist']);
+export const BLEND_TIME=.35;
+export function inertial(x0,v0,T){
+ if(Math.abs(x0)<1e-9&&Math.abs(v0)<1e-9)return()=>0;
+ v0=THREE.MathUtils.clamp(v0,-Math.abs(x0)*5/T-1.5,Math.abs(x0)*5/T+1.5);
+ // Moving away from the target: shorten the window so the offset never overshoots zero and comes back.
+ if(x0*v0<0){const t1=-5*x0/v0;if(t1>0&&t1<T)T=t1;}
+ const a0=(-8*v0*T-20*x0)/(T*T),T2=T*T,T3=T2*T,T4=T3*T,T5=T4*T;
+ const A=-(a0*T2+6*v0*T+12*x0)/(2*T5),B=(3*a0*T2+16*v0*T+30*x0)/(2*T4),C=-(3*a0*T2+12*v0*T+20*x0)/(2*T3);
+ return t=>{if(t>=T)return 0;const t2=t*t,t3=t2*t;return A*t3*t2+B*t3*t+C*t3+a0/2*t2+v0*t+x0;};
+}
+const wrapAngle=a=>Math.atan2(Math.sin(a),Math.cos(a));
 export class ShowcaseDirector {
   constructor(){this.revision=0;this.reset();}
   reset(){this.pose=null;this.practice('stance');}
   practice(id){
     id=id==='martial'?'stance':id;
     const move=SHOWCASE_MOVES[id];if(!move)return;
-    this.from=unwind(this.pose);this.move=move;this.moveId=id;this.time=0;this.revision++;this.events=[];this.update(0);
+    const old=unwind(this.pose);this.move=move;this.moveId=id;this.time=0;this.revision++;this.events=[];this.beginBlend(old);this.update(0);
+  }
+  // Prepare the transition from the pose on screen (and its velocity) into the move that was just set.
+  beginBlend(old,T=BLEND_TIME){
+    this.from=old;this.blend=null;if(!old)return;
+    const enter=samplePose(this.move.keys,0),h=1/60,ahead=samplePose(this.move.keys,h),vel=this.poseVel||{},curves={};
+    for(const k of Object.keys(enter)){
+      if(DISCRETE.has(k)||!(k in old))continue;
+      const ov=vel[k];
+      if(Array.isArray(enter[k])){if(!Array.isArray(old[k]))continue;
+        // Feet: offset only, no momentum carry (the step arc lifts a travelling foot) and a slightly longer window.
+        const foot=/Foot$/.test(k);curves[k]=enter[k].map((e,j)=>inertial(old[k][j]-e,foot?0:(ov?.[j]||0)-(ahead[k][j]-e)/h,foot?T*1.3:T));}
+      else if(typeof enter[k]==='number'&&typeof old[k]==='number'){const wrap=k==='yaw';const x0=wrap?wrapAngle(old[k]-enter[k]):old[k]-enter[k];curves[k]=inertial(x0,(ov||0)-(wrap?wrapAngle(ahead[k]-enter[k]):ahead[k]-enter[k])/h,T);}
+    }
+    this.blend={T,curves};
   }
   seek(time){this.time=THREE.MathUtils.clamp(time,0,this.move.duration);this.update(0);}
   update(dt){
@@ -134,21 +163,33 @@ export class ShowcaseDirector {
     this.cues=(this.move.cues||[]).filter(cue=>cue.at>before && cue.at<=this.time);
     this.events=this.cues.map(cue=>cue.type);
     this.pose=samplePose(this.move.keys,this.time);
-    // Interruptions blend from the currently displayed pose, never pop back to neutral.
-    if(this.from && this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35);for(const k of Object.keys(this.pose))this.pose[k]=Array.isArray(this.pose[k])?this.pose[k].map((v,j)=>THREE.MathUtils.lerp(this.from[k][j],v,u)):THREE.MathUtils.lerp(this.from[k],this.pose[k],u);}
-    if(this.from && this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35),start=this.from.yaw||0;const raw=samplePose(this.move.keys,this.time).yaw;this.pose.yaw=THREE.MathUtils.lerp(start,start+Math.atan2(Math.sin(raw-start),Math.cos(raw-start)),u);}
-    if(this.from&&this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35),target=samplePose(this.move.keys,this.time);
+    // Interruptions carry the displayed pose and its momentum into the new move (inertialization); switches cross-fade.
+    const T=this.blend?.T||BLEND_TIME;
+    if(this.from && this.time<T){const t=this.time,u=THREE.MathUtils.smoothstep(t,0,T),curves=this.blend?.curves||{};
+      for(const k of Object.keys(this.pose)){
+        if(!(k in this.from))continue;
+        if(t===0){this.pose[k]=Array.isArray(this.from[k])?this.from[k].slice():this.from[k];continue;}
+        const c=curves[k];
+        if(Array.isArray(this.pose[k]))this.pose[k]=this.pose[k].map((v,j)=>c?v+c[j](t):THREE.MathUtils.lerp(this.from[k][j],v,u));
+        else if(c)this.pose[k]+=c(t);
+        else this.pose[k]=THREE.MathUtils.lerp(this.from[k],this.pose[k],u);
+      }}
+    if(this.from&&this.time<T){const u=THREE.MathUtils.smoothstep(this.time,0,T),target=samplePose(this.move.keys,this.time);
       for(const side of ['leftFoot','rightFoot']){const a=this.from[side],b=target[side];if(!a||!b||a[1]>.05||b[1]>.05)continue;
         const d=Math.hypot(b[0]-a[0],b[2]-a[2]);if(d>.06)this.pose[side]=[this.pose[side][0],this.pose[side][1]+Math.sin(Math.PI*u)*Math.min(.14,d*.45),this.pose[side][2]];}}
     const follow=this.pose.hitStop>.99?this.pose:samplePose(this.move.keys,Math.max(0,this.time-.055));
     const head=this.pose.hitStop>.99?this.pose:samplePose(this.move.keys,Math.max(0,this.time-.095));
     this.pose.followTwist=follow.twist;this.pose.followLean=follow.lean;this.pose.headTwist=head.twist;
-    if(this.from&&this.time<.35){const u=THREE.MathUtils.smoothstep(this.time,0,.35);for(const k of ['followTwist','followLean','headTwist'])this.pose[k]=THREE.MathUtils.lerp(this.from[k]??this.pose[k],this.pose[k],u);}
+    if(this.from&&this.time<T){const u=THREE.MathUtils.smoothstep(this.time,0,T);for(const k of ['followTwist','followLean','headTwist'])this.pose[k]=THREE.MathUtils.lerp(this.from[k]??this.pose[k],this.pose[k],u);}
     const entry=[...this.move.keys].reverse().find(k=>this.time>=k.at)||this.move.keys[0];
     if(this.state!==entry.phase){this.revision++;this.state=entry.phase;}
     this.stage=entry.stage||entry.phase;
     this.shot=entry.shot;this.progress=this.time/this.move.duration;this.power=this.pose.power;
     const releaseCue=[...(this.move.cues||[])].reverse().find(c=>c.type==='release' && c.at<=this.time);
+    // Velocity of the displayed pose, so the next transition can carry momentum.
+    if(dt>0&&this.prevPose){const v=this.poseVel||(this.poseVel={});for(const k of Object.keys(this.pose)){const a=this.pose[k],b=this.prevPose[k];if(b==null)continue;
+      if(Array.isArray(a))v[k]=a.map((x,j)=>(x-b[j])/dt);else if(typeof a==='number')v[k]=(k==='yaw'?wrapAngle(a-b):a-b)/dt;}}
+    if(dt>0)this.prevPose=structuredClone(this.pose);
     this.signals={beamAge:releaseCue?this.time-releaseCue.at:0,charge:this.pose.charge,beam:this.pose.beam,release:this.events.includes('release'),surge:this.cues.find(c=>c.type==='surge'),impact:this.cues.find(c=>c.type==='impact'),landing:this.cues.find(c=>c.type==='landing'),trails:this.pose.trails};
   }
 }
