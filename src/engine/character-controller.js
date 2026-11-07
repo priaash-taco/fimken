@@ -8,6 +8,7 @@ import { AnimationDirector } from './animation-director.js';
 import { CharacterLook } from './character-look.js';
 import { retargetLibrary, retargetHumanoidLibrary } from './retarget.js';
 import { MotionLife } from './motion-life.js';
+import { BodyStyle } from './body-style.js';
 import { JointSprings } from './joint-springs.js';
 import { MotionSmear } from './motion-smear.js';
 
@@ -131,7 +132,7 @@ export class CharacterController {
     // Optional anime pacing: during fast action the body holds every other frame while everything else runs at full rate.
     this.frameCount=(this.frameCount||0)+1;const fastAction=this.twos&&['punch','kick','dash'].includes(state)&&dt>0;
     if(fastAction&&this.frameCount%2){this.root.updateMatrixWorld(true);return;}
-    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;this.rigControls.apply(this.livePose,time,music);(this.jointSprings??=new JointSprings(this.rigControls)).apply(dt,this.livePose,this.rigControls);
+    if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;if(dt>0){this.style??=new BodyStyle();this.livePose=this.style.apply({...this.livePose},this.poseVel,dt);}this.rigControls.apply(this.livePose,time,music);(this.jointSprings??=new JointSprings(this.rigControls)).apply(dt,this.livePose,this.rigControls);
       this.root.updateMatrixWorld(true);(this.smear??=new MotionSmear(this)).update(dt,this.livePose);this.heroFinish?.updateSway(dt,this.anchor('head',new THREE.Vector3()),Math.max(0,(this.showcasePose.power||0)-.4));this.secondary?.update(dt,this.rigControls.bones,this.anchor('hips',new THREE.Vector3()),this.wind);}
     // Expressions are two procedural shape keys ("focus", "shout"); they ease toward the pose.
     if(this.showcasePose){

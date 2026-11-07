@@ -44,6 +44,7 @@ document.querySelector('#app').innerHTML = `
     <section class="settings-section"><h3>Scene</h3>
       <label class="toggle-row" for="asset-inspection"><span>Neutral view<small>Plain lighting, effects off</small></span><input id="asset-inspection" aria-label="Inspect without effects" type="checkbox"></label>
       <label class="range-label" for="effects">Energy & effects<output id="effects-value">65%</output></label><input id="effects" type="range" min="0" max="100" value="65">
+      <label class="range-label" for="exaggeration">Anime exaggeration<output id="exaggeration-value">35%</output></label><input id="exaggeration" type="range" min="0" max="100" value="35">
       <label class="select-label" for="view">Camera view<select id="view"><option value="training">Full body</option><option value="portrait">Close-up</option></select></label>
       <label class="select-label" for="lens">Vibes<select id="lens" aria-label="Vibes"><option value="classic" selected>Current</option><option value="noir">Noir · light sculpture</option><option value="volume">Volume · cinematic energy</option><option value="chroma">Chroma · motion art</option></select></label>
       <label class="toggle-row" for="auto-camera"><span>Cinematic camera</span><input id="auto-camera" type="checkbox" checked></label>
@@ -250,7 +251,7 @@ $('#auto-camera').addEventListener('change', event => { if (scene) scene.autoCam
 $('#motion-blur').addEventListener('change', event => { if (scene) scene.motionBlurOn = event.target.checked; });
 if (scene) $('#motion-blur').checked = scene.motionBlurOn; // ?blur=0 starts it off
 if (scene) scene.oninteraction = syncMotion;
-for (const name of ['sensitivity', 'effects', 'impactStrength']) {
+for (const name of ['sensitivity', 'effects', 'impactStrength', 'exaggeration']) {
   $(`#${name}`).addEventListener('input', event => {
     if (scene) scene[name] = Number(event.target.value) / 100;
     $(`#${name}-value`).textContent = `${event.target.value}%`;
@@ -289,7 +290,7 @@ for (const button of document.querySelectorAll('[data-practice]')) button.addEve
 });
 
 function savePreferences() {
-  const ids = ['sensitivity', 'effects', 'impactStrength', 'view', 'lens', 'environment', 'quality', 'routine', 'physics', 'auto-camera', 'motion-blur'];
+  const ids = ['sensitivity', 'effects', 'impactStrength', 'exaggeration', 'view', 'lens', 'environment', 'quality', 'routine', 'physics', 'auto-camera', 'motion-blur'];
   const values = Object.fromEntries(ids.map(id => [id, $(`#${id}`).type === 'checkbox' ? $(`#${id}`).checked : $(`#${id}`).value]));
   try { localStorage.setItem(storageKey, JSON.stringify(values)); } catch { /* Storage may be unavailable. */ }
 }
@@ -299,7 +300,7 @@ async function restorePreferences() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return; }
   if (!saved || typeof saved !== 'object') return;
-  for (const id of ['sensitivity', 'effects', 'impactStrength']) {
+  for (const id of ['sensitivity', 'effects', 'impactStrength', 'exaggeration']) {
     const value = Number(saved[id]);
     if (saved[id] != null && Number.isFinite(value) && value >= 0 && value <= 100) {
       $(`#${id}`).value = value; $(`#${id}`).dispatchEvent(new Event('input'));
@@ -354,7 +355,7 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   $('.settings-section').hidden=false;
   const display=document.createElement('section');display.className='essential-display';
   for(const id of ['lens','quality','auto-camera','asset-inspection','motion-blur','reduced-motion'])display.append($('#'+id).closest('label'));
-  display.append(document.querySelector('label[for="effects"]'),$('#effects'));
+  display.append(document.querySelector('label[for="effects"]'),$('#effects'),document.querySelector('label[for="exaggeration"]'),$('#exaggeration'));
   dialog.insertBefore(display,$('.settings-about'));
   $('#source-status').textContent='Connect PC audio, your microphone or a music file.';
   scene?.ready.then(()=>{if(scene.isShowcase&&!scene.inspection&&!scene.reducedMotion)scene.practice('freestyle');});

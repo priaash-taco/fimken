@@ -29,6 +29,7 @@ export class TrainingScene {
     this.isShowcase=CHARACTER.id==='meshy-hero';
     this.inspection = new URLSearchParams(location.search).get('inspection') === '1' || (!this.isShowcase && CHARACTER.defaultReview);
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    { const q = new URLSearchParams(location.search).get('exaggeration'); this.exaggeration = q != null && Number.isFinite(Number(q)) ? Number(q) : .35; }
     this.motionBlurOn = new URLSearchParams(location.search).get('blur') !== '0'; // settings toggle; ?blur=0 for tests
     this.paused = this.reducedMotion || Boolean(!this.isShowcase && CHARACTER.defaultReview); this.autoCamera = !this.paused;
     this.scene = new THREE.Scene();
@@ -213,6 +214,7 @@ export class TrainingScene {
       this.actor.root.rotation.y = THREE.MathUtils.damp(this.actor.root.rotation.y, turn + CHARACTER.facing, 4, dt);
       this.actor.showcasePose=this.isShowcase ? this.director.pose : null;
       { const w = this.vfx.motion.wind, up = Math.max(0, (this.director.power || 0) - .4) * effects * 4; (this.actor.wind ??= { x: 0, y: 0, z: 0 }); this.actor.wind.x = w.x; this.actor.wind.z = w.z; this.actor.wind.y = up; }
+      this.actor.poseVel = this.director.poseVel; if (this.actor.style) { this.actor.style.exaggeration = this.exaggeration ?? .35; this.actor.style.enabled = !this.reducedMotion; }
       this.actor.update(dt, this.time, this.isShowcase?'idle':state, this.music);
       const contact=this.director.signals?.impact||this.director.signals?.landing;
       if(contact){this.punch=Math.max(this.punch||0,Math.min(1,contact.strength));this.shake=.012*contact.strength*this.impactStrength;this.canvas.dataset.contacts=String(Number(this.canvas.dataset.contacts||0)+1);}
