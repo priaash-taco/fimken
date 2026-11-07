@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { HeroRigControls } from './hero-rig-controls.js';
 import { HeroFinish } from './hero-finish.js';
+import { SecondaryMotion } from './secondary-motion.js';
 import { AnimationDirector } from './animation-director.js';
 import { CharacterLook } from './character-look.js';
 import { retargetLibrary, retargetHumanoidLibrary } from './retarget.js';
@@ -103,7 +104,7 @@ export class CharacterController {
     this.head = this.vrm?.humanoid.getRawBoneNode('head') || this.model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(this.definition.bones?.head || 'head'));
     this.hand = this.vrm?.humanoid.getRawBoneNode('rightHand') || this.model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(this.definition.bones?.rightHand || 'handR')) || this.model.getObjectByName('hand.R');
     this.availableClips=clips;this.clipCount = clips.length;
-    if(this.definition.id==='meshy-hero'){this.rigControls=new HeroRigControls(this);this.heroFinish=new HeroFinish(this.model);}
+    if(this.definition.id==='meshy-hero'){this.rigControls=new HeroRigControls(this);this.secondary=new SecondaryMotion(this.model);this.heroFinish=new HeroFinish(this.model,this.secondary);}
     this.look = new CharacterLook(this.model,this.definition.materialRoles);
     this.setFinish(this.definition.finish || 'authored');
     this.vrm?.springBoneManager?.reset();
@@ -131,7 +132,7 @@ export class CharacterController {
     this.frameCount=(this.frameCount||0)+1;const fastAction=this.twos&&['punch','kick','dash'].includes(state)&&dt>0;
     if(fastAction&&this.frameCount%2){this.root.updateMatrixWorld(true);return;}
     if(this.showcasePose && this.rigControls){this.life??=new MotionLife(7);this.livePose=dt>0?this.life.apply(this.showcasePose,dt,time):this.showcasePose;this.rigControls.apply(this.livePose,time,music);(this.jointSprings??=new JointSprings(this.rigControls)).apply(dt,this.livePose,this.rigControls);
-      this.root.updateMatrixWorld(true);(this.smear??=new MotionSmear(this)).update(dt,this.livePose);this.heroFinish?.updateSway(dt,this.anchor('head',new THREE.Vector3()),Math.max(0,(this.showcasePose.power||0)-.4));}
+      this.root.updateMatrixWorld(true);(this.smear??=new MotionSmear(this)).update(dt,this.livePose);this.heroFinish?.updateSway(dt,this.anchor('head',new THREE.Vector3()),Math.max(0,(this.showcasePose.power||0)-.4));this.secondary?.update(dt,this.rigControls.bones,this.anchor('hips',new THREE.Vector3()),this.wind);}
     // Expressions are two procedural shape keys ("focus", "shout"); they ease toward the pose.
     if(this.showcasePose){
       if(!this.morphs){this.morphs=[];this.model.traverse(o=>{if(o.morphTargetDictionary)this.morphs.push(o);});}
