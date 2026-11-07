@@ -414,12 +414,15 @@ async function restorePreferences() {
   try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return; }
   if (!saved || typeof saved !== 'object') return;
   for (const id of ['sensitivity', 'effects', 'impactStrength', 'exaggeration']) {
+    if (id === 'exaggeration' && new URLSearchParams(location.search).has('exaggeration')) continue;
     const value = Number(saved[id]);
     if (saved[id] != null && Number.isFinite(value) && value >= 0 && value <= 100) {
       $(`#${id}`).value = value; $(`#${id}`).dispatchEvent(new Event('input'));
     }
   }
+  const urlParams = new URLSearchParams(location.search);  // an explicit URL setting wins over a saved one
   for (const id of ['view', 'lens', 'environment', 'quality', 'routine']) {
+    if (id === 'lens' && urlParams.has('lens')) continue;
     const select = $(`#${id}`);
     if (!(CHARACTER.defaultReview && (id==='view' || id==='routine')) && [...select.options].some(option => option.value === saved[id])) {
       select.value = saved[id]; select.dispatchEvent(new Event('change'));
