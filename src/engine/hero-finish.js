@@ -3,14 +3,19 @@ import { HERO_LENS, heroLensGlsl, heroLensFragment } from './lens.js';
 import * as THREE from 'three';
 // Keep authored 4K albedo/normal maps. Band direct diffuse lighting gently, retaining
 // shadow maps and point-light response; a skinned inverted hull draws the silhouette.
+// Anime smear: vertices near a fast limb tip trail behind its motion. Positions/velocities are in the skinned mesh's model space.
+const SMEAR_N=6;
+const smearDecl=`uniform float smearCount;uniform vec3 smearPos[${SMEAR_N}];uniform vec3 smearVel[${SMEAR_N}];`;
+const smearBody=`if(smearCount>.5)for(int si=0;si<${SMEAR_N};si++){if(float(si)>=smearCount)break;float sl=length(smearVel[si]);if(sl<.0001)continue;float sw=1.0-smoothstep(0.0,.4,distance(transformed,smearPos[si]));transformed-=smearVel[si]/sl*min(sl*.012,.14)*sw*sw;}`;
 export class HeroFinish {
   constructor(model){
     this.enabled={value:0};this.width={value:.0022};this.inkScale={value:1};this.lensInkOn=true;this.outlines=[];this.glow={value:0};this.glowHulls=[];
+    this.smear={count:{value:0},pos:{value:Array.from({length:SMEAR_N},()=>new THREE.Vector3())},vel:{value:Array.from({length:SMEAR_N},()=>new THREE.Vector3())}};
     // Hair sway: the asset has no hair bones, so hair-only vertices (spikes, back of the head) are
     // offset in the vertex shader by a spring that lags the head's motion. Face vertices never move.
     this.sway={value:new THREE.Vector3()};this.model=model;this.headPrev=new THREE.Vector3();this.swayState={x:new THREE.Vector3(),v:new THREE.Vector3()};this.swayStarted=false;
     const meshes=[];model.traverse(o=>{if(o.isSkinnedMesh)meshes.push(o);});
-    const addSway=shader=>{shader.uniforms.hairSway=this.sway;shader.vertexShader='uniform vec3 hairSway;\nattribute float sway;\nvarying float vSway;\n'+shader.vertexShader.replace('#include <skinning_vertex>','#include <skinning_vertex>\n transformed += hairSway * sway; vSway = sway;');};
+    const addSway=shader=>{shader.uniforms.hairSway=this.sway;shader.uniforms.smearCount=this.smear.count;shader.uniforms.smearPos=this.smear.pos;shader.uniforms.smearVel=this.smear.vel;shader.vertexShader=smearDecl+'uniform vec3 hairSway;\nattribute float sway;\nvarying float vSway;\n'+shader.vertexShader.replace('#include <skinning_vertex>','#include <skinning_vertex>\n transformed += hairSway * sway; vSway = sway;\n'+smearBody);};
     for(const mesh of meshes){
       const geometry=mesh.geometry;
       if(!geometry.attributes.sway){
@@ -39,7 +44,7 @@ export class HeroFinish {
           heroBand = mix(heroBand, 1.0, smoothstep(.67,.74,heroL));
           reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel*lensCel);`+heroLensFragment);
         };
-        material.customProgramCacheKey=()=> 'fimken-hero-lens-v2';material.needsUpdate=true;
+        material.customProgramCacheKey=()=> 'fimken-hero-lens-v3';material.needsUpdate=true;
       }
       const ink=new THREE.MeshStandardMaterial({color:PALETTE.animeBlack,emissive:'#08060d',side:THREE.BackSide,roughness:1});
       ink.onBeforeCompile=shader=>{shader.uniforms.inkWidth=this.width;shader.uniforms.inkScale=this.inkScale;addSway(shader);shader.vertexShader='uniform float inkWidth;uniform float inkScale;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','transformed += normalize(objectNormal) * inkWidth * inkScale;\n#include <project_vertex>');};
@@ -48,8 +53,9 @@ export class HeroFinish {
       outline.bind(mesh.skeleton,mesh.bindMatrix);outline.frustumCulled=false;outline.visible=false;
       mesh.parent.add(outline);this.outlines.push(outline);
       // Energy glow hugging the silhouette: the same hull pushed out further, additive, strongest at grazing angles.
-      const aura=new THREE.ShaderMaterial({uniforms:{glow:this.glow,hairSway:this.sway},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.FrontSide,
-        vertexShader:`#include <common>
+      const aura=new THREE.ShaderMaterial({uniforms:{glow:this.glow,hairSway:this.sway,smearCount:this.smear.count,smearPos:this.smear.pos,smearVel:this.smear.vel},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.FrontSide,
+        vertexShader:`${smearDecl}
+        #include <common>
         #include <skinning_pars_vertex>
         varying float vRim;
         uniform vec3 hairSway;attribute float sway;
@@ -60,6 +66,7 @@ export class HeroFinish {
         #include <begin_vertex>
         #include <skinning_vertex>
         transformed += hairSway * sway;
+        ${smearBody}
         transformed+=normalize(objectNormal)*.012;
         vec4 mv=modelViewMatrix*vec4(transformed,1.);vec3 n=normalize(normalMatrix*objectNormal);vRim=1.-abs(dot(n,normalize(-mv.xyz)));gl_Position=projectionMatrix*mv;}`,
         fragmentShader:`uniform float glow;varying float vRim;void main(){float rim=pow(clamp(vRim,0.,1.),2.2);gl_FragColor=vec4(mix(vec3(1.,.72,.25),vec3(1.,.95,.75),rim)*2.4*rim,rim*glow);}`});
