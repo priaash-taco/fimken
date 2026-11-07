@@ -4,13 +4,13 @@ import * as THREE from 'three';
 // Keep authored 4K albedo/normal maps. Band direct diffuse lighting gently, retaining
 // shadow maps and point-light response; a skinned inverted hull draws the silhouette.
 export class HeroFinish {
-  constructor(model){
+  constructor(model,secondary=null){this.secondary=secondary;
     this.enabled={value:0};this.width={value:.0022};this.inkScale={value:1};this.lensInkOn=true;this.outlines=[];this.glow={value:0};this.glowHulls=[];
     // Hair sway: the asset has no hair bones, so hair-only vertices (spikes, back of the head) are
     // offset in the vertex shader by a spring that lags the head's motion. Face vertices never move.
     this.sway={value:new THREE.Vector3()};this.model=model;this.headPrev=new THREE.Vector3();this.swayState={x:new THREE.Vector3(),v:new THREE.Vector3()};this.swayStarted=false;
     const meshes=[];model.traverse(o=>{if(o.isSkinnedMesh)meshes.push(o);});
-    const addSway=shader=>{shader.uniforms.hairSway=this.sway;shader.vertexShader='uniform vec3 hairSway;\nattribute float sway;\nvarying float vSway;\n'+shader.vertexShader.replace('#include <skinning_vertex>','#include <skinning_vertex>\n transformed += hairSway * sway; vSway = sway;');};
+    const addSway=shader=>{this.secondary?.patch(shader);shader.uniforms.hairSway=this.sway;shader.vertexShader='uniform vec3 hairSway;\nattribute float sway;\nvarying float vSway;\n'+shader.vertexShader.replace('#include <skinning_vertex>','#include <skinning_vertex>\n transformed += hairSway * sway; vSway = sway;');};
     for(const mesh of meshes){
       const geometry=mesh.geometry;
       if(!geometry.attributes.sway){
@@ -39,7 +39,7 @@ export class HeroFinish {
           heroBand = mix(heroBand, 1.0, smoothstep(.67,.74,heroL));
           reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel*lensCel);`+heroLensFragment);
         };
-        material.customProgramCacheKey=()=> 'fimken-hero-lens-v2';material.needsUpdate=true;
+        material.customProgramCacheKey=()=> 'fimken-hero-lens-v3';material.needsUpdate=true;
       }
       const ink=new THREE.MeshStandardMaterial({color:PALETTE.animeBlack,emissive:'#08060d',side:THREE.BackSide,roughness:1});
       ink.onBeforeCompile=shader=>{shader.uniforms.inkWidth=this.width;shader.uniforms.inkScale=this.inkScale;addSway(shader);shader.vertexShader='uniform float inkWidth;uniform float inkScale;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','transformed += normalize(objectNormal) * inkWidth * inkScale;\n#include <project_vertex>');};
@@ -48,8 +48,8 @@ export class HeroFinish {
       outline.bind(mesh.skeleton,mesh.bindMatrix);outline.frustumCulled=false;outline.visible=false;
       mesh.parent.add(outline);this.outlines.push(outline);
       // Energy glow hugging the silhouette: the same hull pushed out further, additive, strongest at grazing angles.
-      const aura=new THREE.ShaderMaterial({uniforms:{glow:this.glow,hairSway:this.sway},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.FrontSide,
-        vertexShader:`#include <common>
+      const aura=new THREE.ShaderMaterial({uniforms:{glow:this.glow,hairSway:this.sway,...(secondary?{regionOffset:secondary.uniform}:{})},transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.FrontSide,
+        vertexShader:(s=>secondary?secondary.inject(s):s)(`#include <common>
         #include <skinning_pars_vertex>
         varying float vRim;
         uniform vec3 hairSway;attribute float sway;
@@ -61,7 +61,7 @@ export class HeroFinish {
         #include <skinning_vertex>
         transformed += hairSway * sway;
         transformed+=normalize(objectNormal)*.012;
-        vec4 mv=modelViewMatrix*vec4(transformed,1.);vec3 n=normalize(normalMatrix*objectNormal);vRim=1.-abs(dot(n,normalize(-mv.xyz)));gl_Position=projectionMatrix*mv;}`,
+        vec4 mv=modelViewMatrix*vec4(transformed,1.);vec3 n=normalize(normalMatrix*objectNormal);vRim=1.-abs(dot(n,normalize(-mv.xyz)));gl_Position=projectionMatrix*mv;}`),
         fragmentShader:`uniform float glow;varying float vRim;void main(){float rim=pow(clamp(vRim,0.,1.),2.2);gl_FragColor=vec4(mix(vec3(1.,.72,.25),vec3(1.,.95,.75),rim)*2.4*rim,rim*glow);}`});
       const hull=new THREE.SkinnedMesh(mesh.geometry,aura);hull.name='Hero energy glow';
       hull.position.copy(mesh.position);hull.quaternion.copy(mesh.quaternion);hull.scale.copy(mesh.scale);
