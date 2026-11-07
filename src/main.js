@@ -65,6 +65,7 @@ document.querySelector('#app').innerHTML = `
       <button id="reset-training" class="text-button">Reset showcase</button>
       <label class="toggle-row" for="physics"><span>Training physics</span><input id="physics" type="checkbox" checked></label>
       <label class="range-label" for="impactStrength">Impact camera<output id="impactStrength-value">65%</output></label><input id="impactStrength" type="range" min="0" max="100" value="65">
+      <label class="toggle-row" for="motion-blur"><span>Motion blur</span><input id="motion-blur" type="checkbox" checked></label>
       <label class="toggle-row" for="reduced-motion"><span>Reduced motion</span><input id="reduced-motion" type="checkbox"></label>
       <div id="material-controls">
         <label class="select-label" for="character-finish">Character finish<select id="character-finish" aria-label="Character finish"><option value="cinematic">Cinematic cel shading</option><option value="authored">Original materials</option></select></label>
@@ -246,6 +247,8 @@ $('#reduced-motion').addEventListener('change', event => {
   if (scene) { scene.paused = event.target.checked; scene.reducedMotion=event.target.checked; if (scene.paused) scene.autoCamera = false; syncMotion(); }
 });
 $('#auto-camera').addEventListener('change', event => { if (scene) scene.autoCamera = event.target.checked; });
+$('#motion-blur').addEventListener('change', event => { if (scene) scene.motionBlurOn = event.target.checked; });
+if (scene) $('#motion-blur').checked = scene.motionBlurOn; // ?blur=0 starts it off
 if (scene) scene.oninteraction = syncMotion;
 for (const name of ['sensitivity', 'effects', 'impactStrength']) {
   $(`#${name}`).addEventListener('input', event => {
@@ -286,7 +289,7 @@ for (const button of document.querySelectorAll('[data-practice]')) button.addEve
 });
 
 function savePreferences() {
-  const ids = ['sensitivity', 'effects', 'impactStrength', 'view', 'lens', 'environment', 'quality', 'routine', 'physics', 'auto-camera'];
+  const ids = ['sensitivity', 'effects', 'impactStrength', 'view', 'lens', 'environment', 'quality', 'routine', 'physics', 'auto-camera', 'motion-blur'];
   const values = Object.fromEntries(ids.map(id => [id, $(`#${id}`).type === 'checkbox' ? $(`#${id}`).checked : $(`#${id}`).value]));
   try { localStorage.setItem(storageKey, JSON.stringify(values)); } catch { /* Storage may be unavailable. */ }
 }
@@ -309,6 +312,7 @@ async function restorePreferences() {
     }
   }
   if (typeof saved.physics === 'boolean') { $('#physics').checked = saved.physics; scene.physicsEnabled = saved.physics; }
+  if (typeof saved['motion-blur'] === 'boolean' && new URLSearchParams(location.search).get('blur') !== '0') { $('#motion-blur').checked = saved['motion-blur']; scene.motionBlurOn = saved['motion-blur']; }
   if (!scene.paused && typeof saved['auto-camera'] === 'boolean') { $('#auto-camera').checked = saved['auto-camera']; scene.autoCamera = saved['auto-camera']; }
 
 }
@@ -349,7 +353,7 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   // Audio is the first original section and remains available.
   $('.settings-section').hidden=false;
   const display=document.createElement('section');display.className='essential-display';
-  for(const id of ['lens','quality','auto-camera','asset-inspection','reduced-motion'])display.append($('#'+id).closest('label'));
+  for(const id of ['lens','quality','auto-camera','asset-inspection','motion-blur','reduced-motion'])display.append($('#'+id).closest('label'));
   display.append(document.querySelector('label[for="effects"]'),$('#effects'));
   dialog.insertBefore(display,$('.settings-about'));
   $('#source-status').textContent='Connect PC audio, your microphone or a music file.';
