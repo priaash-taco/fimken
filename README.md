@@ -16,7 +16,9 @@ Open the settings with the gear beside the wordmark (or press S).
   Microphone, a local music file, Demo (silent, scripted energy) and First Light (a short original score).
   Capture only starts from a user gesture and audio never leaves the device. Sound sensitivity scales the response.
 - **Vibes**: a lens dropdown that restyles the whole frame: Current, Noir (light sculpture), Volume
-  (cinematic energy) and Chroma (motion art).
+  (cinematic energy), Chroma (motion art) and Ink (drawn anime: flat two-tone cel, thick ink lines, posterised colour).
+- **Backdrop**: Scene, a photo from your device or the live camera behind the figure, composited like a drawn
+  character on footage (works best with Ink). `?bg=<image url>` or `?bg=camera` on the URL. Not saved between visits.
 - **Anime exaggeration**: 0 to 100%. Scales twist, lean, bank and crouch, and pushes reaches outward. Off for reduced motion.
 - **Motion blur**: velocity-based blur on the hero and effects.
 - **Render quality**: Performance, Balanced or High (up to a 3840 x 2160 render target with adaptive resolution;
@@ -25,7 +27,7 @@ Open the settings with the gear beside the wordmark (or press S).
 
 Keyboard: `Space` pause, `F` fullscreen, `S` settings, `P` performance mode, `T` animate on twos, `?` help.
 Drag the canvas to orbit and scroll to zoom. Useful URL options: `?inspection=1` (neutral light, no post effects),
-`?controls=1`, `?lens=noir`, `?exaggeration=0.6`, `?debug=1` (development panels).
+`?controls=1`, `?lens=noir` (or `ink`), `?bg=camera`, `?exaggeration=0.6`, `?debug=1` (development panels).
 
 ## Requirements
 

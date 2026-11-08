@@ -1,5 +1,5 @@
 import { PALETTE } from './palette.js';
-import { HERO_LENS, heroLensGlsl, heroLensFragment } from './lens.js';
+import { HERO_LENS, heroLensGlsl, heroLensFragment, heroPosterFragment, heroInkFragment } from './lens.js';
 import * as THREE from 'three';
 // Keep authored 4K albedo/normal maps. Band direct diffuse lighting gently, retaining
 // shadow maps and point-light response; a skinned inverted hull draws the silhouette.
@@ -37,14 +37,15 @@ export class HeroFinish {
         material.onBeforeCompile=shader=>{
           before.call(material,shader);shader.uniforms.heroCel=this.enabled;Object.assign(shader.uniforms,HERO_LENS);addSway(shader);
           shader.fragmentShader='uniform float heroCel;\n'+heroLensGlsl+shader.fragmentShader;
-          if(shader.fragmentShader.includes('diffuseColor'))shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float lensLum = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lensLum) * lensTintH, lensDesat * (1.0 - lensFlood)); diffuseColor.rgb *= mix(lensAlbedo, 1.0, lensFlood);');
+          if(shader.fragmentShader.includes('diffuseColor'))shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n float lensLum = dot(diffuseColor.rgb, vec3(.2126, .7152, .0722)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(lensLum) * lensTintH, lensDesat * (1.0 - lensFlood)); diffuseColor.rgb *= mix(lensAlbedo, 1.0, lensFlood);'+heroPosterFragment);
           shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',`#include <lights_fragment_end>
           float heroL = max(.0001, dot(reflectedLight.directDiffuse, vec3(.2126,.7152,.0722)));
           float heroBand = mix(.26, .60, smoothstep(.27,.32,heroL));
           heroBand = mix(heroBand, 1.0, smoothstep(.67,.74,heroL));
-          reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel*lensCel);`+heroLensFragment);
+          reflectedLight.directDiffuse *= mix(1.0, mix(1.0,clamp(heroBand/heroL,.6,1.22),.7),heroCel*lensCel*(1.0-lensInk));`+heroInkFragment+heroLensFragment);
         };
-        material.customProgramCacheKey=()=> 'fimken-hero-lens-v5';material.needsUpdate=true;
+        material.customProgramCacheKey=()=> 'fimken-hero-lens-v7';material.needsUpdate=true;
+        if(material.normalScale){this.normalBases??=new Map();this.normalBases.set(material,material.normalScale.clone());}
       }
       const ink=new THREE.MeshStandardMaterial({color:PALETTE.animeBlack,emissive:'#08060d',side:THREE.BackSide,roughness:1});
       ink.onBeforeCompile=shader=>{shader.uniforms.inkWidth=this.width;shader.uniforms.inkScale=this.inkScale;addSway(shader);shader.vertexShader='uniform float inkWidth;uniform float inkScale;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>','transformed += normalize(objectNormal) * inkWidth * inkScale;\n#include <project_vertex>');};
@@ -94,4 +95,6 @@ export class HeroFinish {
   // A lens may hide the ink line or thin it; the user's outline setting still applies on top.
   setLensInk(visible,scale){this.inkScale.value=scale;if(this.lensInkOn!==visible){this.lensInkOn=visible;this.apply(Boolean(this.enabled.value));}}
   setWidth(width){this.width.value=width;this.apply(Boolean(this.enabled.value));}
+  // Ink lens: a hard lit/shadow split turns normal-map detail into speckle, so the normal maps are flattened with it.
+  setFlat(k){k=Math.max(0,Math.min(1,k||0));if(k===this.flatK||!this.normalBases)return;this.flatK=k;for(const [m,base] of this.normalBases)m.normalScale.copy(base).multiplyScalar(1-k*.85);}
 }

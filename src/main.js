@@ -97,7 +97,8 @@ document.querySelector('#app').innerHTML = `
       <label class="range-label" for="effects">Energy & effects<output id="effects-value">65%</output></label><input id="effects" type="range" min="0" max="100" value="65">
       <label class="range-label" for="exaggeration">Anime exaggeration<output id="exaggeration-value">35%</output></label><input id="exaggeration" type="range" min="0" max="100" value="35">
       <label class="select-label" for="view">Camera view<select id="view"><option value="training">Full body</option><option value="portrait">Close-up</option></select></label>
-      <label class="select-label" for="lens">Vibes<select id="lens" aria-label="Vibes"><option value="classic" selected>Current</option><option value="noir">Noir · light sculpture</option><option value="volume">Volume · cinematic energy</option><option value="chroma">Chroma · motion art</option></select></label>
+      <label class="select-label" for="lens">Vibes<select id="lens" aria-label="Vibes"><option value="classic" selected>Current</option><option value="noir">Noir · light sculpture</option><option value="volume">Volume · cinematic energy</option><option value="chroma">Chroma · motion art</option><option value="ink">Ink · drawn anime</option></select></label>
+      <label class="select-label" for="backdrop">Backdrop<select id="backdrop" aria-label="Backdrop"><option value="none" selected>Scene</option><option value="photo">Photo…</option><option value="camera">Camera</option></select></label><input type="file" id="backdrop-file" accept="image/*" hidden>
       <label class="toggle-row" for="auto-camera"><span>Cinematic camera</span><input id="auto-camera" type="checkbox" checked></label>
     </section>
     <details id="quality-debug" class="settings-disclosure"><summary>Quality / debug</summary>
@@ -389,6 +390,16 @@ const selectBindings = {
   routine: value => { if (scene?.director) { scene.director.mode = value; scene.resetTraining(); } },
 };
 for (const [id, apply] of Object.entries(selectBindings)) $(`#${id}`).addEventListener('change', event => apply(event.target.value));
+// Backdrop: a photo or the camera behind the figure (not persisted: files and camera permission need a fresh gesture).
+const backdropFailed = (error) => { console.warn('Backdrop unavailable', error); $('#backdrop').value = 'none'; };
+$('#backdrop').addEventListener('change', event => {
+  const value = event.target.value;
+  if (value === 'photo') { $('#backdrop-file').value = ''; $('#backdrop-file').click(); return; }
+  scene?.lens?.setBackdrop(value === 'camera' ? 'camera' : null).catch(backdropFailed);
+});
+$('#backdrop-file').addEventListener('change', event => { const file = event.target.files?.[0]; if (file) scene?.lens?.setBackdrop(file).catch(backdropFailed); else $('#backdrop').value = 'none'; });
+$('#backdrop-file').addEventListener('cancel', () => { $('#backdrop').value = 'none'; });
+{ const bg = new URLSearchParams(location.search).get('bg'); if (bg) scene?.ready?.then(() => scene.lens.setBackdrop(bg).then(() => { $('#backdrop').value = bg === 'camera' ? 'camera' : 'photo'; }).catch(backdropFailed)); }
 $('#physics').addEventListener('change', event => { if (scene?.physics) { scene.physicsEnabled = event.target.checked; scene.physics.reset(); } });
 $('#action-position').addEventListener('input',event=>{const t=Number(event.target.value);scene?.reviewAction(t);$('#action-position-value').textContent=t.toFixed(2)+'s';});
 $('#motion-speed').addEventListener('change',event=>{if(scene)scene.playbackSpeed=Number(event.target.value);});
@@ -473,7 +484,7 @@ if(!debugUI&&CHARACTER.id==='meshy-hero'){
   // Audio is the first original section and remains available.
   $('.settings-section').hidden=false;
   const display=document.createElement('section');display.className='essential-display';
-  for(const id of ['lens','quality','auto-camera','asset-inspection','motion-blur','reduced-motion'])display.append($('#'+id).closest('label'));
+  for(const id of ['lens','backdrop','quality','auto-camera','asset-inspection','motion-blur','reduced-motion'])display.append($('#'+id).closest('label'));
   display.append(document.querySelector('label[for="effects"]'),$('#effects'),document.querySelector('label[for="exaggeration"]'),$('#exaggeration'));
   dialog.insertBefore(display,$('.settings-about'));
   $('#source-status').textContent='Connect PC audio, your microphone or a music file.';

@@ -17,7 +17,7 @@ const shot = async name => { const png = await page.evaluate(() => window.__fimk
 const state = () => page.evaluate(() => ({ lens: window.__fimken.lens.name, committed: document.querySelector('#battle').dataset.lens, move: window.__fimken.director.moveId, t: +window.__fimken.director.time.toFixed(2) }));
 await page.evaluate(() => window.__fimken.practice('powerup')); await page.waitForTimeout(1500);
 report.start = await state(); await shot('0-classic');
-for (const name of ['noir', 'volume', 'chroma', 'classic']) {
+for (const name of ['noir', 'volume', 'chroma', 'ink', 'classic']) {
   await page.selectOption('#lens', name); await page.waitForTimeout(220); await shot(`${name}-mid-fade`);
   await page.waitForTimeout(1400); report[name] = await state(); await shot(`${name}`);
 }

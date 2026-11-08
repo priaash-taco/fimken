@@ -29,8 +29,25 @@ export const HERO_LENS = {
   lensAlbedo: { value: 1 }, lensAmbient: { value: 1 }, lensCel: { value: 1 }, lensFlood: { value: 0 }, lensRim: { value: 0 }, lensRimPow: { value: 3 },
   lensRimColor: { value: new THREE.Vector3(1, 1, 1) }, lensRimDir: { value: new THREE.Vector3(0, 0, 1) }, lensSpec: { value: 1 }, lensIrid: { value: 0 },
   lensPhase: { value: .2 }, lensStripe: { value: 0 }, lensHair: { value: 0 }, lensDesat: { value: 0 }, lensTintH: { value: new THREE.Vector3(1, 1, 1) },
+  // Ink: a drawn two-tone cel (lit colour or one flat shadow tone, split at lensInkCut), posterised albedo and a saturation lift.
+  lensInk: { value: 0 }, lensInkCut: { value: .45 }, lensPoster: { value: 0 }, lensSatH: { value: 0 }, lensShade: { value: new THREE.Vector3(.62, .55, .70) },
 };
-export const heroLensGlsl = 'uniform float lensAlbedo;uniform float lensAmbient;uniform float lensCel;uniform float lensFlood;uniform float lensRim;uniform float lensRimPow;uniform vec3 lensRimColor;uniform vec3 lensRimDir;uniform float lensSpec;uniform float lensIrid;uniform float lensPhase;uniform float lensStripe;uniform float lensHair;uniform float lensDesat;uniform vec3 lensTintH;\nvarying float vSway;\n';
+export const heroLensGlsl = 'uniform float lensAlbedo;uniform float lensAmbient;uniform float lensCel;uniform float lensFlood;uniform float lensRim;uniform float lensRimPow;uniform vec3 lensRimColor;uniform vec3 lensRimDir;uniform float lensSpec;uniform float lensIrid;uniform float lensPhase;uniform float lensStripe;uniform float lensHair;uniform float lensDesat;uniform vec3 lensTintH;uniform float lensInk;uniform float lensInkCut;uniform float lensPoster;uniform float lensSatH;uniform vec3 lensShade;\nvarying float vSway;\n';
+// Albedo for the Ink lens: lift saturation, then quantise the painted luminance into five flat steps so the
+// texture's soft shading reads as drawn shadow shapes instead of a gradient.
+export const heroPosterFragment = ` if (lensPoster > 0.0) { float pl = max(dot(diffuseColor.rgb, vec3(.2126, .7152, .0722)), .001); vec3 ps = mix(vec3(pl), diffuseColor.rgb, 1.0 + lensSatH); float ql = (floor(pl * 5.0) + .5) / 5.0; diffuseColor.rgb = mix(diffuseColor.rgb, clamp(ps * (ql / pl), 0.0, 1.0), lensPoster); }`;
+// Lighting for the Ink lens: the incoming light (shadow maps included) becomes a hard lit/shadow decision,
+// the shadow side takes one cool flat tone, ambient and specular are removed, and the light's colour
+// (an energy flood, the key's warmth) tints the flat colour without shading it.
+export const heroInkFragment = `
+          if (lensInk > 0.0) {
+            float inkA = max(dot(material.diffuseColor, vec3(.2126, .7152, .0722)), .001); float inkLight = heroL / inkA; // material.diffuseColor carries the metalness cut that heroL saw
+            float inkLit = smoothstep(lensInkCut - .05, lensInkCut + .05, inkLight);
+            vec3 inkCol = reflectedLight.directDiffuse / max(reflectedLight.directDiffuse.r + reflectedLight.directDiffuse.g + reflectedLight.directDiffuse.b, .001) * 3.0;
+            vec3 inkFlat = diffuseColor.rgb * mix(lensShade, vec3(1.0), inkLit) * mix(vec3(1.0), inkCol, .45) * (1.0 + clamp(inkLight - 1.2, 0.0, 1.5) * .5);
+            reflectedLight.directDiffuse = mix(reflectedLight.directDiffuse, inkFlat, lensInk);
+            reflectedLight.indirectDiffuse *= 1.0 - lensInk; reflectedLight.indirectSpecular *= 1.0 - lensInk; reflectedLight.directSpecular *= 1.0 - lensInk;
+          }`;
 export const heroLensFragment = `
           reflectedLight.indirectDiffuse *= mix(lensAmbient, 1.0, lensFlood);
           vec3 lensN = normalize(normal); vec3 lensV = normalize(vViewPosition); float lensNV = clamp(dot(lensN, lensV), 0.0, 1.0);
@@ -52,6 +69,7 @@ const IDENTITY = {
   fill: 1, key: 1, rim: 1, floorLight: 1, energy: 1, orb: 1, keyColor: [1, 1, 1], keyMix: 0, rimColor: [1, 1, 1], rimMix: 0, sweep: 0,
   albedo: 1, ambient: 1, cel: 1, rimStr: 0, rimPow: 3, heroRim: [1, 1, 1], spec: 1, irid: 0, hair: 0, ink: 1, floodK: 0, heroDesat: 0, heroTint: [1, 1, 1], pillars: 1, rays: 0,
   fxGain: 1, fxSat: 1, fxTint: [1, 1, 1], fxMap: 0, fxComp: 0, fxBeam: 1, contact: 0, energyColor: [1, 1, 1], energyMix: 0,
+  toon: 0, toonCut: .45, poster: 0, satH: 0, edge: 0, flat: 0,
 };
 const lens = (p, d) => ({ p: { ...IDENTITY, ...p }, d: { sky: 'all', rocks: true, haze: true, ...d } });
 export const LENSES = {
@@ -76,6 +94,16 @@ export const LENSES = {
     fill: .12, key: .5, rim: 1.1, floorLight: .04, energy: 1.2, orb: 1.2, keyColor: [.75, .78, 1], keyMix: 1, rimColor: [.2, .85, 1], rimMix: .8, sweep: .35,
     albedo: .5, ambient: .3, cel: .12, rimStr: 1.1, rimPow: 3, heroRim: [.3, .85, 1], spec: .9, irid: .42, ink: 0, floodK: .2, heroDesat: .96, heroTint: [.58, .66, .85], pillars: .3,
     fxGain: .95, fxSat: .9, fxTint: [1, 1, 1], fxMap: 1, fxComp: 1, fxBeam: .68, contact: .3, energyColor: [.3, .8, 1], energyMix: 1,
+  }, { sky: 'none', rocks: false, haze: false }),
+  // ink: drawn anime. Flat two-tone cel on the figure, posterised saturated colour, thick silhouette ink plus
+  // screen-space interior lines, no specular, no rim, a light flat backdrop (or a photo / the camera, see setBackdrop).
+  ink: lens({
+    exposure: 1.05, bloom: .25, sat: 1.08, contrast: 1.04, vignette: .1, black: 0,
+    fogScale: 1.1, fogMix: 1, fogColor: [.50, .48, .47], floorMix: 1, floorColor: [.42, .40, .38], floorRough: 1, floorMetal: 0, floorOpacity: .92, dust: 0,
+    fill: .25, key: 1.25, rim: 0, floorLight: 0, energy: .2, orb: 1, keyColor: [1, .97, .9], keyMix: .7, sweep: 0,
+    albedo: 1, ambient: 1, cel: 1, rimStr: 0, spec: 0, hair: 0, ink: 2.6, floodK: .35, pillars: .35,
+    toon: 1, toonCut: .27, poster: 1, satH: .4, edge: 1, flat: 1, contact: 1,
+    fxGain: 1.3, fxSat: 1.4, fxComp: .8, fxBeam: .85,
   }, { sky: 'none', rocks: false, haze: false }),
 };
 export const LENS_NAMES = Object.keys(LENSES);
@@ -105,6 +133,7 @@ export class LensController {
     this.contact = new ContactShadow(scene);
     this.base = null; this.fogBase = null; this.floorBase = null; this.keyTouched = false; this.rimBase = null;
     this.c = new THREE.Color(); this.v = new THREE.Vector3(); this.w = new THREE.Vector3();
+    this.presets = LENSES; this.hero = HERO_LENS; // handles for review scripts
   }
   // Instant (used at start-up and for ?lens=).
   set(name) { if (!LENSES[name]) return; this.name = name; this.fade = { phase: 'idle', t: 0, pending: null, value: 1 }; this.commit(this.inspection ? 'classic' : name); }
@@ -182,7 +211,10 @@ export class LensController {
     H.lensRim.value = cur.rimStr * dyn.rim; H.lensRimPow.value = cur.rimPow; H.lensRimColor.value.fromArray(heroRim); H.lensSpec.value = cur.spec; H.lensIrid.value = cur.irid * dyn.irid;
     H.lensDesat.value = cur.heroDesat; H.lensTintH.value.fromArray(cur.heroTint); H.lensPhase.value = a.phase; H.lensStripe.value = a.stripe; H.lensHair.value = cur.hair * (.6 + a.accent * .8 + (power > .5 ? .5 : 0));
     if (camera) { const source = eff === 'volume' || eff === 'classic' ? L.rim.position : this.sweep.position; H.lensRimDir.value.copy(this.w.copy(source).sub(position).normalize().transformDirection(camera.matrixWorldInverse)); }
+    H.lensInk.value = cur.toon; H.lensInkCut.value = cur.toonCut; H.lensPoster.value = cur.poster; H.lensSatH.value = cur.satH;
     const actor = this.getActor?.(); actor?.heroFinish?.setLensInk(cur.ink > .05 || this.inspection, this.inspection ? 1 : Math.max(.2, cur.ink));
+    actor?.heroFinish?.setFlat(this.inspection ? 0 : cur.flat);
+    this.updateBackdrop(eff, camera);
     // Energy effects share one colour treatment.
     LENS_FX.gain.value = cur.fxGain * (1 + (eff === 'volume' ? a.bass * .08 : 0)); LENS_FX.sat.value = cur.fxSat; LENS_FX.tint.value.fromArray(cur.fxTint); LENS_FX.map.value = cur.fxMap; LENS_FX.comp.value = cur.fxComp; LENS_FX.beam.value = cur.fxBeam; LENS_FX.phase.value = a.phase;
     // Environment.
@@ -198,13 +230,49 @@ export class LensController {
       floor.color.lerp(this.c.fromArray(cur.floorColor), k); floor.roughness = this.floorBase.rough + (cur.floorRough - this.floorBase.rough) * k;
       floor.metalness = this.floorBase.metal + (cur.floorMetal - this.floorBase.metal) * k; floor.opacity = this.floorBase.opacity + (cur.floorOpacity - this.floorBase.opacity) * k;
     } else if (floor && this.floorBase) { Object.assign(floor, { roughness: this.floorBase.rough, metalness: this.floorBase.metal, opacity: this.floorBase.opacity }); this.floorBase = null; }
-    if (world.dust && cur.dust !== 1) world.dust.material.opacity *= cur.dust;
+    const behind = this.backdrop && !this.inspection ? 0 : 1; // a photo or camera backdrop shows only the figure, its effects and its contact shadow
+    const dustK = cur.dust * behind; if (world.dust && dustK !== 1) world.dust.material.opacity *= dustK;
     this.contact.update(position, cur.contact * (1 - flood * .5));
-    const pillars = this.getPillars?.(); if (pillars) pillars.uniforms.strength.value *= cur.pillars;
+    const pillars = this.getPillars?.(); if (pillars) pillars.uniforms.strength.value *= cur.pillars * behind;
     // Post: exposure, bloom, grade, shafts, floor reflection and the transition dip.
     const P = this.pipeline;
     P.renderer.toneMappingExposure = cur.exposure + dyn.exposure;
     P.lensBloom = cur.bloom; P.lensSat = cur.sat; P.lensShadow = cur.shadow; P.lensBlack = cur.black; P.lensVig = cur.vignette; P.shafts = dyn.shafts;
     P.contrast = (P.contrast || 1) * cur.contrast; P.fade = f.value; P.rays = dyn.rays; P.shaftWorld.copy(L.rim.position); P.mirrorWorld.set(position.x, 0, position.z); P.mirror = cur.mirror;
+    P.edge = cur.edge * (this.inspection ? 0 : 1);
+  }
+  // Backdrop: a photo (URL, File or Blob) or the device camera behind the figure, composited like a drawn
+  // character on live footage. The floor is hidden (the contact shadow stays), the sky and rocks already are
+  // in Ink; other lenses keep their world and the backdrop only replaces the sky colour behind it.
+  async setBackdrop(source) {
+    this.clearBackdrop();
+    if (!source || source === 'none') return;
+    let texture;
+    if (source === 'camera') {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } }, audio: false });
+      const video = Object.assign(document.createElement('video'), { srcObject: stream, muted: true, playsInline: true }); await video.play();
+      texture = new THREE.VideoTexture(video); this.backdropStream = stream;
+    } else {
+      const url = typeof source === 'string' ? source : URL.createObjectURL(source);
+      texture = await new THREE.TextureLoader().loadAsync(url); if (typeof source !== 'string') URL.revokeObjectURL(url);
+    }
+    texture.colorSpace = THREE.SRGBColorSpace; texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping; texture.matrixAutoUpdate = false;
+    this.backdrop = texture;
+  }
+  clearBackdrop() {
+    if (this.backdropStream) { for (const t of this.backdropStream.getTracks()) t.stop(); this.backdropStream = null; }
+    if (this.backdrop) { this.backdrop.dispose(); this.backdrop = null; }
+    if (this.bgSaved !== undefined) { this.scene.background = this.bgSaved; this.bgSaved = undefined; }
+    if (this.world.floor && this.floorHidden) { this.world.floor.visible = true; this.floorHidden = false; }
+  }
+  updateBackdrop(eff, camera) {
+    const tex = this.backdrop, sc = this.scene;
+    if (!tex || this.inspection) { if (this.bgSaved !== undefined) { sc.background = this.bgSaved; this.bgSaved = undefined; } if (this.floorHidden) { this.world.floor.visible = true; this.floorHidden = false; } return; }
+    if (sc.background !== tex) { this.bgSaved = sc.background; sc.background = tex; sc.backgroundIntensity = 1.25; }
+    if (this.world.floor && eff === 'ink') { this.world.floor.visible = false; this.floorHidden = true; } else if (this.floorHidden) { this.world.floor.visible = true; this.floorHidden = false; }
+    // Cover-fit: crop the image to the canvas aspect instead of stretching it.
+    const img = tex.image, iw = img?.videoWidth || img?.width || 1, ih = img?.videoHeight || img?.height || 1, ia = iw / ih, ca = camera?.aspect || 1;
+    const sx = ca > ia ? 1 : ia / ca, sy = ca > ia ? ca / ia : 1; // fraction of the image shown on each axis (sx,sy <= 1 after inversion below)
+    tex.matrix.setUvTransform((1 - 1 / sx) / 2, (1 - 1 / sy) / 2, 1 / sx, 1 / sy, 0, 0, 0);
   }
 }

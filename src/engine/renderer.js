@@ -41,12 +41,13 @@ export class CinematicRenderer {
     // Heat haze, grade, tone mapping and sRGB conversion share one full-screen pass.
     // The arithmetic and its order match the former separate passes.
     this.finish = new ShaderPass(new THREE.RawShaderMaterial({
-      uniforms: { tDiffuse:{value:null}, motionBlur:{value:0}, tVelocity:{value:null}, tDepth:{value:null}, reproj:{value:new THREE.Matrix4()}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, lensSat:{value:1}, lensShadow:{value:new THREE.Vector3()}, lensBlack:{value:0}, lensVig:{value:0}, shafts:{value:0}, rays:{value:0}, shaftSrc:{value:new THREE.Vector2(.7,.8)}, mirrorY:{value:0}, mirror:{value:0}, fade:{value:1}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
+      uniforms: { tDiffuse:{value:null}, motionBlur:{value:0}, tVelocity:{value:null}, tDepth:{value:null}, reproj:{value:new THREE.Matrix4()}, toneMappingExposure:{value:1}, warmth:{value:.03}, cold:{value:0}, blur:{value:0}, shockR:{value:0}, shockS:{value:0}, aspect:{value:1}, darken:{value:0}, contrast:{value:1}, flash:{value:0}, lensSat:{value:1}, lensShadow:{value:new THREE.Vector3()}, lensBlack:{value:0}, lensVig:{value:0}, shafts:{value:0}, rays:{value:0}, shaftSrc:{value:new THREE.Vector2(.7,.8)}, mirrorY:{value:0}, mirror:{value:0}, fade:{value:1}, edge:{value:0}, edgePx:{value:new THREE.Vector2(1,1)}, camNear:{value:.05}, camFar:{value:150}, time:{value:0}, strength:{value:0}, speed:{value:0}, center:{value:new THREE.Vector2(.5,.5)}, radius:{value:new THREE.Vector2(.1,.25)} },
       vertexShader:'precision highp float;uniform mat4 modelViewMatrix;uniform mat4 projectionMatrix;attribute vec3 position;attribute vec2 uv;varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader:`precision highp float;
-      uniform sampler2D tDiffuse;uniform sampler2D tVelocity;uniform sampler2D tDepth;uniform mat4 reproj;uniform float motionBlur;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;uniform float lensSat;uniform float lensBlack;uniform float lensVig;uniform float shafts;uniform float rays;uniform vec2 shaftSrc;uniform float mirrorY;uniform float mirror;uniform float fade;uniform vec3 lensShadow;varying vec2 vUv;
+      uniform sampler2D tDiffuse;uniform sampler2D tVelocity;uniform sampler2D tDepth;uniform mat4 reproj;uniform float motionBlur;uniform float warmth;uniform float cold;uniform float blur;uniform float shockR;uniform float shockS;uniform float aspect;uniform float darken;uniform float contrast;uniform float flash;uniform float time;uniform float strength;uniform float speed;uniform vec2 center;uniform vec2 radius;uniform float lensSat;uniform float lensBlack;uniform float lensVig;uniform float shafts;uniform float rays;uniform vec2 shaftSrc;uniform float mirrorY;uniform float mirror;uniform float fade;uniform vec3 lensShadow;uniform float edge;uniform vec2 edgePx;uniform float camNear;uniform float camFar;varying vec2 vUv;
       #include <tonemapping_pars_fragment>
       #include <colorspace_pars_fragment>
+      float linDepth(vec2 p){float z=texture2D(tDepth,clamp(p,vec2(.001),vec2(.999))).x*2.-1.;return 2.*camNear*camFar/(camFar+camNear-z*(camFar-camNear));}
       void main(){vec2 uv=vUv;
       if(strength>0.){vec2 p=(vUv-center)/radius;float d=length(p);
        float ring=smoothstep(.88,1.10,d)*(1.-smoothstep(1.45,1.9,d));
@@ -70,6 +71,17 @@ export class CinematicRenderer {
          float w=1.-step(1.6*ml+.0004,length(texture2D(tVelocity,tuv).xy*motionBlur*vec2(aspect,1.)));
          macc+=texture2D(tDiffuse,tuv).rgb*w;mw+=w;}
         c=macc/mw;}}
+      // Ink lens: drawn interior lines where the depth buffer breaks (a hand over the torso, fingers, the sash edge,
+      // folds). The second derivative of linear depth ignores flat slopes and fires on steps and creases; the
+      // threshold scales with distance and the line fades out on far objects.
+      if(edge>0.){float d0=linDepth(uv);
+       if(d0<40.){vec2 ex=vec2(edgePx.x,0.),ey=vec2(0.,edgePx.y);
+        float dl=linDepth(uv-ex),dr=linDepth(uv+ex),du=linDepth(uv-ey),dd=linDepth(uv+ey);
+        float crease=(abs(dl+dr-2.*d0)+abs(du+dd-2.*d0))/d0;
+        float dl2=linDepth(uv-ex*2.),dr2=linDepth(uv+ex*2.),du2=linDepth(uv-ey*2.),dd2=linDepth(uv+ey*2.);
+        float crease2=(abs(dl2+dr2-2.*d0)+abs(du2+dd2-2.*d0))/d0;
+        float line=max(smoothstep(.0025,.007,crease),smoothstep(.006,.016,crease2))*(1.-smoothstep(14.,40.,d0));
+        c*=1.-line*edge*.92;}}
       c+=ringGlow*vec3(.18,.3,.5);float l=dot(c,vec3(.2126,.7152,.0722));
       c=mix(vec3(l),c,1.04);c*=vec3(1.+warmth,1.,1.-warmth*.55);
       c=mix(c,c*vec3(.66,.78,1.32)+vec3(.012,.0,.06)*l,cold);c=mix(vec3(dot(c,vec3(.2126,.7152,.0722))),c,1.+cold*.28);
@@ -122,6 +134,7 @@ export class CinematicRenderer {
     this.bloom.setSize(width*postRatio*BLOOM_SCALE,height*postRatio*BLOOM_SCALE);
     this.velocity.setSize(width*postRatio,height*postRatio); // follows the composer size, so it follows the governor too
     this.fxaa.uniforms.resolution.value.set(1/(width*postRatio),1/(height*postRatio));
+    { const px=Math.max(1,height*postRatio/720*1.4); this.finish.uniforms.edgePx.value.set(px/(width*postRatio),px/(height*postRatio)); } // ink line about 1.4 px at 720p, thicker at higher resolutions
     this.bloom.enabled = preset.bloom;
     this.fxaa.enabled=true;
     this.canvas.dataset.resolution = `${Math.round(width * ratio)}×${Math.round(height * ratio)}`;
@@ -161,6 +174,7 @@ export class CinematicRenderer {
     finish.strength.value=this.heatStrength; finish.time.value=sceneTime;
     finish.toneMappingExposure.value=this.renderer.toneMappingExposure; finish.cold.value=this.cold||0; finish.blur.value=(this.blur||0)*(1-THREE.MathUtils.smoothstep(Math.max(Math.abs(this.heatProjection.x),Math.abs(this.heatProjection.y)),.8,1.3)); finish.speed.value=this.speed||0; finish.darken.value=this.darken||0; finish.shockR.value=this.shockR||0; finish.shockS.value=this.shockS||0; finish.aspect.value=this.camera.aspect; finish.contrast.value=this.contrast||1; finish.flash.value=this.flash||0;
     this.mirrorProjection.copy(this.mirrorWorld).project(this.camera);
+    finish.edge.value=this.inspection?0:(this.edge||0); finish.camNear.value=this.camera.near; finish.camFar.value=this.camera.far;
     finish.lensSat.value=this.lensSat??1; finish.lensShadow.value.set(...(this.lensShadow||[0,0,0])); finish.lensBlack.value=this.lensBlack||0; finish.lensVig.value=this.lensVig||0; finish.shafts.value=this.shafts||0; finish.rays.value=this.rays||0; this.shaftProjection.copy(this.shaftWorld).project(this.camera); finish.shaftSrc.value.set(this.shaftProjection.x*.5+.5,this.shaftProjection.y*.5+.5); finish.fade.value=this.fade??1; finish.mirror.value=this.mirror||0; finish.mirrorY.value=this.mirrorProjection.y*.5+.5;
     const energy = Math.max(0, power - .25) / .75;
     this.bloom.strength = (.18 + energy * .1) * effects * (this.lensBloom ?? 1);
